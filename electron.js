@@ -104,6 +104,7 @@ if (window.api) {
           if (parent.relativePath == "") {
             rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder, 'mailbox');            
           }
+          //On insère les dossiers sous le dossier principal
           else {
             rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder + '/' + parent.relativePath, 'mailbox');
           }
