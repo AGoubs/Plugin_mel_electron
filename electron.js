@@ -84,13 +84,7 @@ if (window.api) {
     window.api.receive('listSubfolder', (subfolders) => {
       subfolders.forEach(subfolder => {
         if (subfolder.name == rcmail.env.username) {
-          subfolder.relativePath = subfolder.relativePath.replace(/\\/g, "/");
-          let key = subfolder.relativePath;
-          let link = $('<a>').attr('href', '#')
-            .attr('rel', subfolder.name)
-            .attr('onClick', "chargementArchivage('" + key + "')")
-            .html(translateFolder(subfolder.name));
-          rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder);
+          subfolder.relativePath = '';
           getChildren(subfolder);
         }
       })
@@ -106,7 +100,13 @@ if (window.api) {
           .attr('rel', key)
           .attr('onClick', "chargementArchivage('" + key + "')")
           .html(translateFolder(child.name));
-        rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder + '/' + parent.relativePath, 'mailbox');
+          //On ignore le dossier de l'utilisateur
+          if (parent.relativePath == "") {
+            rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder, 'mailbox');            
+          }
+          else {
+            rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder + '/' + parent.relativePath, 'mailbox');
+          }
         getChildren(child);
       }
     }
