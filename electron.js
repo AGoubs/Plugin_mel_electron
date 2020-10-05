@@ -150,7 +150,6 @@ if (window.api) {
 
   // ----- Affiche la liste des messages d'un dossier -----
   function loadArchive(path) {
-    console.log(rcmail.env.account);
     window.api.send('read_mail_dir', path)
     window.api.receive('mail_dir', (mails) => {
       mails.forEach((mail) => {
