@@ -47,14 +47,14 @@ if (window.api) {
   // ----- Avancement de l'archivage -----
   let message_archivage = '';
   window.api.receive('download-advancement', (data) => {
-    console.log('MESSAGES');
     rcmail.hide_message(message_archivage);
     message_archivage = rcmail.display_message(`Nombre de mails restants : ${data.length}`, 'loading');
-
+    
     if (data.uid) {
+      let mail_data = rcmail.params_from_uid(data.uid)
       rcmail.http_post('mail/delete', {
-        _mbox: data.mbox,
-        _uid: data.uid,
+        _mbox: mail_data._mbox,
+        _uid: mail_data._uid,
       });
     }
   })
