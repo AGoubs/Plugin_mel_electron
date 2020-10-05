@@ -52,14 +52,14 @@ if (window.api) {
   let message_archivage = '';
   window.api.receive('download-advancement', (data) => {
     rcmail.hide_message(message_archivage);
-    message_archivage = rcmail.display_message(`Nombre de mails restants : ${data.length}`, 'loading');
+    message_archivage = rcmail.display_message(`Nombre de mails restants : ${data.length}`, 'loading', null ,'monID');
 
     if (data.uid) {
       let mail_data = rcmail.params_from_uid(data.uid)
-      rcmail.http_post('mail/delete', {
-        _mbox: mail_data._mbox,
-        _uid: mail_data._uid,
-      });
+      // rcmail.http_post('mail/delete', {
+      //   _mbox: mail_data._mbox,
+      //   _uid: mail_data._uid,
+      // });
     }
   })
 
@@ -250,6 +250,12 @@ function flag_unflagged() {
   })
 }
 
+function arret_archivage() {
+  $(".arret_archivage").on("click", function() {
+    alert('STOP');
+  })
+}
+
 function translateFolder(name) {
   switch (name) {
     case 'INBOX':
@@ -268,3 +274,5 @@ function translateFolder(name) {
       return name;
   }
 }
+
+
