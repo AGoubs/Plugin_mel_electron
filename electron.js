@@ -23,6 +23,10 @@ if (window.api) {
   rcmail.addEventListener('init', function (evt) {
     if (rcmail.env.iselectron) {
       if (window.api) {
+        console.log(rcmail.env.username);
+        if (rcmail.env.username) {
+          window.api.send('download_eml', { "token": rcmail.env.request_token });
+        }
         window.api.send('get_archive_folder')
         window.api.receive('archive_folder', (folder) => {
           rcmail.env.local_archive_folder = folder;
@@ -49,18 +53,18 @@ if (window.api) {
   window.api.receive('download-advancement', (data) => {
     rcmail.hide_message(message_archivage);
     message_archivage = rcmail.display_message(`Nombre de mails restants : ${data.length}`, 'loading');
-    
+
     if (data.uid) {
       let mail_data = rcmail.params_from_uid(data.uid)
-      rcmail.http_post('mail/delete', {
-        _mbox: mail_data._mbox,
-        _uid: mail_data._uid,
-      });
+      // rcmail.http_post('mail/delete', {
+      //   _mbox: mail_data._mbox,
+      //   _uid: mail_data._uid,
+      // });
     }
   })
 
   // ----- Suppression des mails après archivage -----
-  window.parent.api.receive('download-finish', (files) => {
+  window.parent.api.receive('download-finish', (file) => {
     rcmail.hide_message(message_archivage);
     rcmail.display_message('Fin du téléchargement des archives', 'confirmation');
   });
@@ -100,14 +104,14 @@ if (window.api) {
           .attr('rel', key)
           .attr('onClick', "chargementArchivage('" + key + "')")
           .html(translateFolder(child.name));
-          //On ignore le dossier de l'utilisateur
-          if (parent.relativePath == "") {
-            rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder, 'mailbox');            
-          }
-          //On insère les dossiers sous le dossier principal
-          else {
-            rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder + '/' + parent.relativePath, 'mailbox');
-          }
+        //On ignore le dossier de l'utilisateur
+        if (parent.relativePath == "") {
+          rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder, 'mailbox');
+        }
+        //On insère les dossiers sous le dossier principal
+        else {
+          rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder + '/' + parent.relativePath, 'mailbox');
+        }
         getChildren(child);
       }
     }
