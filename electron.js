@@ -54,7 +54,7 @@ if (window.api) {
     message_archivage = rcmail.display_message(`Nombre de mails restants : ${data.length}`, 'loading');
     message_cancel = rcmail.display_message(`Cliquez ici pour arrêter l'archivage`, 'error stop_archivage');
 
-    $('.error.stop_archivage').on('click', function(e) {
+    $('.error.stop_archivage').on('click', function (e) {
       e.preventDefault();
       window.api.send('stop-archivage')
     })
@@ -176,6 +176,7 @@ if (window.api) {
       delete rcmail.message_list._events;
 
       rcmail.message_list.addEventListener('select', function (list) {
+
         let uid = list.get_single_selection();
 
         if (uid == null && rcmail.env.mailbox != rcmail.env.local_archive_folder) {
@@ -186,30 +187,23 @@ if (window.api) {
         if (uid == "MA") {
           uid = 0;
         }
+
+        deleteSelectedMail(uid);
+
         window.api.send('mail_select', uid)
 
-        document.body.classList.add('busy-cursor');
         window.api.receive('mail_return', (mail) => {
           let body = $("#mainscreen").contents().find('#mailview-bottom');
           body.html(mail);
-          document.body.classList.remove('busy-cursor');
         });
       });
-
-
-
     }
   };
 
 }
 
 function openAttachment(uid, partid) {
-  document.body.classList.add('busy-cursor');
   window.api.send('attachment_select', { 'uid': uid, 'partid': partid })
-
-  window.api.receive('busy-loader', () => {
-    document.body.classList.remove('busy-cursor');
-  });
 }
 
 function addMessageRow(row, mbox) {
@@ -277,3 +271,15 @@ function translateFolder(name) {
 }
 
 
+function deleteSelectedMail(uid) {
+  console.log(uid);
+  rcmail.enable_command('delete', true);
+  $('.button.delete').removeAttr("onclick").removeAttr('href');
+  $('.button.delete').on('click', function (e) {
+    e.preventDefault();
+    rcmail.message_list.remove_row(uid);
+    let body = $("#mainscreen").contents().find('#mailview-bottom');
+    body.html('');
+    window.api.send
+  });
+}
