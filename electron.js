@@ -52,7 +52,7 @@ if (window.api) {
   let message_archivage = '';
   window.api.receive('download-advancement', (data) => {
     rcmail.hide_message(message_archivage);
-    message_archivage = rcmail.display_message(`Nombre de mails restants : ${data.length}`, 'loading', null ,'monID');
+    message_archivage = rcmail.display_message(`Nombre de mails restants : ${data.length}`, 'loading', null, 'monID');
 
     if (data.uid) {
       let mail_data = rcmail.params_from_uid(data.uid)
@@ -251,7 +251,7 @@ function flag_unflagged() {
 }
 
 function arret_archivage() {
-  $(".arret_archivage").on("click", function() {
+  $(".arret_archivage").on("click", function () {
     alert('STOP');
   })
 }
