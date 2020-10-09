@@ -23,7 +23,6 @@ if (window.api) {
   rcmail.addEventListener('init', function (evt) {
     if (rcmail.env.iselectron) {
       if (window.api) {
-        console.log(rcmail.env.username);
         if (rcmail.env.username) {
           window.api.send('download_eml', { "token": rcmail.env.request_token });
         }
@@ -52,14 +51,20 @@ if (window.api) {
   let message_archivage = '';
   window.api.receive('download-advancement', (data) => {
     rcmail.hide_message(message_archivage);
-    message_archivage = rcmail.display_message(`Nombre de mails restants : ${data.length}`, 'loading', null, 'monID');
+    message_archivage = rcmail.display_message(`Nombre de mails restants : ${data.length}`, 'loading');
+    message_cancel = rcmail.display_message(`Cliquez ici pour arrêter l'archivage`, 'error stop_archivage');
+
+    $('.error.stop_archivage').on('click', function(e) {
+      e.preventDefault();
+      window.api.send('stop-archivage')
+    })
 
     if (data.uid) {
       let mail_data = rcmail.params_from_uid(data.uid)
-      rcmail.http_post('mail/delete', {
-        _mbox: mail_data._mbox,
-        _uid: mail_data._uid,
-      });
+      // rcmail.http_post('mail/delete', {
+      //   _mbox: mail_data._mbox,
+      //   _uid: mail_data._uid,
+      // });
     }
   })
 
@@ -250,11 +255,6 @@ function flag_unflagged() {
   })
 }
 
-function arret_archivage() {
-  $(".arret_archivage").on("click", function () {
-    alert('STOP');
-  })
-}
 
 function translateFolder(name) {
   switch (name) {
