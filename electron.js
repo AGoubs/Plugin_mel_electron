@@ -71,6 +71,7 @@ if (window.api) {
   // ----- Suppression des mails après archivage -----
   window.parent.api.receive('download-finish', (file) => {
     rcmail.hide_message(message_archivage);
+    rcmail.hide_message(message_cancel);
     rcmail.display_message('Fin du téléchargement des archives', 'confirmation');
   });
 
