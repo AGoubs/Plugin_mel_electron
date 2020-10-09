@@ -61,10 +61,10 @@ if (window.api) {
 
     if (data.uid) {
       let mail_data = rcmail.params_from_uid(data.uid)
-      // rcmail.http_post('mail/delete', {
-      //   _mbox: mail_data._mbox,
-      //   _uid: mail_data._uid,
-      // });
+      rcmail.http_post('mail/delete', {
+        _mbox: mail_data._mbox,
+        _uid: mail_data._uid,
+      });
     }
   })
 
