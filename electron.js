@@ -176,25 +176,28 @@ if (window.api) {
       delete rcmail.message_list._events;
 
       rcmail.message_list.addEventListener('select', function (list) {
+        deleteSelectedMail(list.get_selection());
 
-        let uid = list.get_single_selection();
+        if (list.selection.length = 1) {
 
-        if (uid == null && rcmail.env.mailbox != rcmail.env.local_archive_folder) {
-          document.location.reload();
+          let uid = list.get_single_selection();
+
+          if (uid == null && rcmail.env.mailbox != rcmail.env.local_archive_folder) {
+            document.location.reload();
+          }
+
+          //Premier index de message_list = MA au lieu de 0
+          if (uid == "MA") {
+            uid = 0;
+          }
+
+          window.api.send('mail_select', uid)
+
+          window.api.receive('mail_return', (mail) => {
+            let body = $("#mainscreen").contents().find('#mailview-bottom');
+            body.html(mail);
+          });
         }
-
-        //Premier index de message_list = MA au lieu de 0
-        if (uid == "MA") {
-          uid = 0;
-        }
-        deleteSelectedMail(uid);
-
-        window.api.send('mail_select', uid)
-
-        window.api.receive('mail_return', (mail) => {
-          let body = $("#mainscreen").contents().find('#mailview-bottom');
-          body.html(mail);
-        });
       });
     }
   };
@@ -270,17 +273,25 @@ function translateFolder(name) {
 }
 
 
-function deleteSelectedMail(uid) {
+function deleteSelectedMail(uids) {
   rcmail.enable_command('delete', true);
   $(".button.delete").unbind('click');
   $('.button.delete').removeAttr("onclick").removeAttr('href');
   $('.button.delete').on('click', function (e) {
     e.preventDefault();
-    if (confirm('Voulez-vous supprimer le mail sélectionné ?')) {
-      rcmail.message_list.remove_row(uid);
-      let body = $("#mainscreen").contents().find('#mailview-bottom');
-      body.html('');
-      window.api.send('delete_selected_mail', uid);
+    if (confirm('Voulez-vous supprimer le(s) mail(s) sélectionné(s) ?')) {
+      if (uids.length > 1) {
+        uids.forEach((uid) => {
+          rcmail.message_list.remove_row(uid);
+          window.api.send('delete_selected_mail', uid);
+        })
+      }
+      else {
+        rcmail.message_list.remove_row(uids);
+        window.api.send('delete_selected_mail', uids);
+        let body = $("#mainscreen").contents().find('#mailview-bottom');
+        body.html('');
+      }
     }
   });
 }
