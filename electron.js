@@ -187,7 +187,6 @@ if (window.api) {
         if (uid == "MA") {
           uid = 0;
         }
-
         deleteSelectedMail(uid);
 
         window.api.send('mail_select', uid)
@@ -272,14 +271,16 @@ function translateFolder(name) {
 
 
 function deleteSelectedMail(uid) {
-  console.log(uid);
   rcmail.enable_command('delete', true);
+  $(".button.delete").unbind('click');
   $('.button.delete').removeAttr("onclick").removeAttr('href');
   $('.button.delete').on('click', function (e) {
     e.preventDefault();
-    rcmail.message_list.remove_row(uid);
-    let body = $("#mainscreen").contents().find('#mailview-bottom');
-    body.html('');
-    window.api.send
+    if (confirm('Voulez-vous supprimer le mail sélectionné ?')) {
+      rcmail.message_list.remove_row(uid);
+      let body = $("#mainscreen").contents().find('#mailview-bottom');
+      body.html('');
+      window.api.send('delete_selected_mail', uid);
+    }
   });
 }
