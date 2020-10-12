@@ -284,6 +284,8 @@ function deleteSelectedMail(uids) {
         uids.forEach((uid) => {
           rcmail.message_list.remove_row(uid);
           window.api.send('delete_selected_mail', uid);
+          let body = $("#mainscreen").contents().find('#mailview-bottom');
+          body.html('');
         })
       }
       else {
