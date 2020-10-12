@@ -100,6 +100,7 @@ if (window.api) {
       })
     });
   }
+
   function getChildren(parent) {
     if (parent && parent.children) {
       for (var i = 0, l = parent.children.length; i < l; ++i) {
@@ -245,6 +246,22 @@ function flag_unflagged() {
   })
 }
 
+function deleteSelectedMail(uids) {
+  rcmail.enable_command('delete', true);
+  $(".button.delete").unbind('click');
+  $('.button.delete').removeAttr("onclick").removeAttr('href');
+  $('.button.delete').on('click', function (e) {
+    e.preventDefault();
+    if (confirm('Voulez-vous supprimer le(s) mail(s) sélectionné(s) ?')) {
+      for (const uid of uids) {
+        rcmail.message_list.remove_row(uid);
+          window.api.send('delete_selected_mail', uid);
+          let body = $("#mainscreen").contents().find('#mailview-bottom');
+          body.html('');
+      }
+    }
+  });
+}
 
 function translateFolder(name) {
   switch (name) {
@@ -265,20 +282,3 @@ function translateFolder(name) {
   }
 }
 
-
-function deleteSelectedMail(uids) {
-  rcmail.enable_command('delete', true);
-  $(".button.delete").unbind('click');
-  $('.button.delete').removeAttr("onclick").removeAttr('href');
-  $('.button.delete').on('click', function (e) {
-    e.preventDefault();
-    if (confirm('Voulez-vous supprimer le(s) mail(s) sélectionné(s) ?')) {
-      for (const uid of uids) {
-        rcmail.message_list.remove_row(uid);
-          window.api.send('delete_selected_mail', uid);
-          let body = $("#mainscreen").contents().find('#mailview-bottom');
-          body.html('');
-      }
-    }
-  });
-}
