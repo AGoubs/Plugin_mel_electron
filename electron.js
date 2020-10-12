@@ -136,16 +136,9 @@ if (window.api) {
       window.api.send('search_list', { "value": $('#quicksearchbox').val(), "subfolder": rcmail.env.mailbox.replace(rcmail.env.local_archive_folder + "/", "") });
       window.api.receive('result_search', (rows) => {
         rcmail.message_list.clear();
-        if (rows.length > 0) {
-          rows.forEach(row => {
-            if (row.break == 0) {
-              addMessageRow(row, rcmail.env.local_archive_folder + "/" + row.subfolder);
-            }
-          });
-        }
-        else {
-          if (rows.break == 0) {
-            addMessageRow(rows, rcmail.env.local_archive_folder + "/" + row.subfolder);
+        for (const row of rows) {
+          if (row.break == 0) {
+            addMessageRow(row, rcmail.env.local_archive_folder + "/" + row.subfolder);
           }
         }
       });
@@ -280,19 +273,11 @@ function deleteSelectedMail(uids) {
   $('.button.delete').on('click', function (e) {
     e.preventDefault();
     if (confirm('Voulez-vous supprimer le(s) mail(s) sélectionné(s) ?')) {
-      if (uids.length > 1) {
-        uids.forEach((uid) => {
-          rcmail.message_list.remove_row(uid);
+      for (const uid of uids) {
+        rcmail.message_list.remove_row(uid);
           window.api.send('delete_selected_mail', uid);
           let body = $("#mainscreen").contents().find('#mailview-bottom');
           body.html('');
-        })
-      }
-      else {
-        rcmail.message_list.remove_row(uids);
-        window.api.send('delete_selected_mail', uids);
-        let body = $("#mainscreen").contents().find('#mailview-bottom');
-        body.html('');
       }
     }
   });
