@@ -60,11 +60,15 @@ if (window.api) {
     })
 
     if (data.uid) {
-      let mail_data = rcmail.params_from_uid(data.uid)
-      rcmail.http_post('mail/delete', {
-        _mbox: mail_data._mbox,
-        _uid: mail_data._uid,
-      });
+      console.log(data.mbox);
+      try {
+        rcmail.http_post('mail/delete', {
+          _mbox: data.mbox,
+          _uid: data.uid,
+        });
+      } catch (error) {
+        console.log('Erreur dans la suppression du mail n°' + data.uid);
+      }
     }
   })
 
@@ -255,9 +259,9 @@ function deleteSelectedMail(uids) {
     if (confirm('Voulez-vous supprimer le(s) mail(s) sélectionné(s) ?')) {
       for (const uid of uids) {
         rcmail.message_list.remove_row(uid);
-          window.api.send('delete_selected_mail', uid);
-          let body = $("#mainscreen").contents().find('#mailview-bottom');
-          body.html('');
+        window.api.send('delete_selected_mail', uid);
+        let body = $("#mainscreen").contents().find('#mailview-bottom');
+        body.html('');
       }
     }
   });
