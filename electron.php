@@ -29,7 +29,9 @@ class electron extends rcube_plugin
         $rcmail = rcmail::get_instance();
 
         $rcmail->output->set_env('iselectron', $this->isElectron());
-        $this->include_script('electron.js');
+        if ($this->isElectron()) {
+            $this->include_script('electron.js');
+        }
         
         if ($rcmail->task == 'settings' || $rcmail->task == 'mail') {
 
