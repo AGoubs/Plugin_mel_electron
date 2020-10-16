@@ -210,7 +210,6 @@ function addMessageRow(row, mbox) {
   row.fromto = "<span class='adr'><span class='rcmContactAddress'>" + row.fromto + "</span></span>";
   let date = new Date(row.date);
   row.date = date.getUTCDate() + '/' + date.getUTCMonth() + '/' + date.getUTCFullYear() + ' ' + (date.getUTCHours()<10?'0':'') + date.getUTCHours() + ':' + (date.getUTCMinutes()<10?'0':'') + date.getUTCMinutes();
-  console.log(row.date);
   let etiquettes = JSON.parse(row.etiquettes);
   let seen = etiquettes.SEEN ? 1 : 0;
   let flagged = etiquettes.FLAGGED ? 1 : 0;
