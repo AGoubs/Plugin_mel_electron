@@ -176,9 +176,8 @@ if (window.api) {
       rcmail.message_list.addEventListener('select', function (list) {
         deleteSelectedMail(list.get_selection());
 
-        if (list.selection.length = 1) {
-
-          let uid = list.get_single_selection();
+        if (list.get_selection().length < 2) {
+          let uid = list.get_selection();
 
           if (uid == null && rcmail.env.mailbox != rcmail.env.local_archive_folder) {
             document.location.reload();
@@ -200,28 +199,30 @@ if (window.api) {
 
       let drag_uid;
       rcmail.message_list.addEventListener('dragstart', function (data) {
-        drag_uid = data.get_single_selection();
-
+        drag_uid = data.get_selection();
       });
 
       rcmail.message_list.addEventListener('dragend', function (data) {
-        window.api.send('eml_read', drag_uid)
+        for (const uid of drag_uid) {
 
-        window.api.receive('eml_return', (eml) => {
-          rcmail.http_post('mail/plugin.import_message', {
-            _folder: data.target.rel,
-            _message: eml,
-            _uid: drag_uid
+          window.api.send('eml_read', uid)
+
+          window.api.receive('eml_return', (eml) => {
+            rcmail.http_post('mail/plugin.import_message', {
+              _folder: data.target.rel,
+              _message: eml,
+              _uid: uid
+            });
           });
-        });
 
-        rcmail.addEventListener('responseafterplugin.import_message', function (event) {
-          if(event.response.data) {
-            rcmail.message_list.remove_row(event.response.uid);
-            window.api.send('delete_selected_mail', event.response.uid);
-            rcmail.display_message('Courriel(s) importé(s) avec succès', 'confirmation');
-          }
-        });
+          rcmail.addEventListener('responseafterplugin.import_message', function (event) {
+            if (event.response.data) {
+              rcmail.message_list.remove_row(event.response.uid);
+              window.api.send('delete_selected_mail', [event.response.uid]);
+              rcmail.display_message('Courriel(s) importé(s) avec succès', 'confirmation');
+            }
+          });
+        }
       });
     }
   };
@@ -287,10 +288,11 @@ function deleteSelectedMail(uids) {
     if (confirm('Voulez-vous supprimer le(s) mail(s) sélectionné(s) ?')) {
       for (const uid of uids) {
         rcmail.message_list.remove_row(uid);
-        window.api.send('delete_selected_mail', uid);
-        let body = $("#mainscreen").contents().find('#mailview-bottom');
-        body.html('');
       }
+      window.api.send('delete_selected_mail', uids);
+      let body = $("#mainscreen").contents().find('#mailview-bottom');
+      body.html('');
+      rcmail.display_message('Courriel(s) supprimé(s) avec succès', 'confirmation');
     }
   });
 }
