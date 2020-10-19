@@ -171,6 +171,7 @@ if (window.api) {
     })
     if (rcmail.message_list) {
       rcmail.message_list.clear();
+      console.log(rcmail.message_list._events);
       delete rcmail.message_list._events;
 
       rcmail.message_list.addEventListener('select', function (list) {
@@ -196,6 +197,14 @@ if (window.api) {
             body.html(mail);
           });
         }
+      });
+
+      rcmail.message_list.addEventListener('dragstart', function (data) {
+        console.log(data.get_selection());
+      });
+
+      rcmail.message_list.addEventListener('dragend', function (data) {
+        console.log(data.target.rel);
       });
     }
   };
