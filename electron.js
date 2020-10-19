@@ -171,7 +171,6 @@ if (window.api) {
     })
     if (rcmail.message_list) {
       rcmail.message_list.clear();
-      console.log(rcmail.message_list._events);
       delete rcmail.message_list._events;
 
       rcmail.message_list.addEventListener('select', function (list) {
@@ -199,12 +198,30 @@ if (window.api) {
         }
       });
 
+      let drag_uid;
       rcmail.message_list.addEventListener('dragstart', function (data) {
-        console.log(data.get_selection());
+        drag_uid = data.get_single_selection();
+
       });
 
       rcmail.message_list.addEventListener('dragend', function (data) {
-        console.log(data.target.rel);
+        window.api.send('eml_read', drag_uid)
+
+        window.api.receive('eml_return', (eml) => {
+          rcmail.http_post('mail/plugin.import_message', {
+            _folder: data.target.rel,
+            _message: eml,
+            _uid: drag_uid
+          });
+        });
+
+        rcmail.addEventListener('responseafterplugin.import_message', function (event) {
+          if(event.response.data) {
+            rcmail.message_list.remove_row(event.response.uid);
+            window.api.send('delete_selected_mail', event.response.uid);
+            rcmail.display_message('Courriel(s) importé(s) avec succès', 'confirmation');
+          }
+        });
       });
     }
   };
@@ -218,7 +235,7 @@ function openAttachment(uid, partid) {
 function addMessageRow(row, mbox) {
   row.fromto = "<span class='adr'><span class='rcmContactAddress'>" + row.fromto + "</span></span>";
   let date = new Date(row.date);
-  row.date = date.getUTCDate() + '/' + date.getUTCMonth() + '/' + date.getUTCFullYear() + ' ' + (date.getUTCHours()<10?'0':'') + date.getUTCHours() + ':' + (date.getUTCMinutes()<10?'0':'') + date.getUTCMinutes();
+  row.date = date.getUTCDate() + '/' + date.getUTCMonth() + '/' + date.getUTCFullYear() + ' ' + (date.getUTCHours() < 10 ? '0' : '') + date.getUTCHours() + ':' + (date.getUTCMinutes() < 10 ? '0' : '') + date.getUTCMinutes();
   let etiquettes = JSON.parse(row.etiquettes);
   let seen = etiquettes.SEEN ? 1 : 0;
   let flagged = etiquettes.FLAGGED ? 1 : 0;
