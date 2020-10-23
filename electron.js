@@ -213,8 +213,13 @@ if (rcmail.env.iselectron) {
       drag_uid = data.get_selection();
     });
 
+    //On importe les events de drag pour le survol des dossiers
+    rcmail.message_list.addEventListener('dragstart', function(e) { rcmail.drag_start(e); })
+    rcmail.message_list.addEventListener('dragmove', function(e) { rcmail.drag_move(e); })
+    rcmail.message_list.addEventListener('dragend', function(e) { rcmail.drag_end(e); })
+    
     rcmail.message_list.addEventListener('dragend', function (data) {
-      if (drag_uid) {
+      if (drag_uid && data.target.rel) {
         for (const uid of drag_uid) {
           window.api.send('eml_read', uid)
 
@@ -235,7 +240,6 @@ if (rcmail.env.iselectron) {
           });
         }
       }
-
     });
   }
 
