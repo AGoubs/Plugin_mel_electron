@@ -56,7 +56,6 @@ if (rcmail.env.iselectron) {
       })
 
       if (data.uid) {
-        console.log(data.mbox);
         try {
           rcmail.http_post('mail/delete', {
             _mbox: data.mbox,
@@ -131,6 +130,7 @@ if (rcmail.env.iselectron) {
 
       loadArchive(path);
 
+      dragEvent();
       searchEvent();
       resetSearchEvent(path);
     }
@@ -177,7 +177,6 @@ if (rcmail.env.iselectron) {
             }
           }
         });
-        dragEvent();
       }
     };
 
@@ -208,37 +207,38 @@ if (rcmail.env.iselectron) {
   }
 
   function dragEvent() {
-    let drag_uid;
+    let drag_uid = [];
     rcmail.message_list.addEventListener('dragstart', function (data) {
       drag_uid = data.get_selection();
     });
 
-    //On importe les events de drag pour le survol des dossiers
-    rcmail.message_list.addEventListener('dragstart', function(e) { rcmail.drag_start(e); })
-    rcmail.message_list.addEventListener('dragmove', function(e) { rcmail.drag_move(e); })
-    rcmail.message_list.addEventListener('dragend', function(e) { rcmail.drag_end(e); })
-    
+    // On importe les events de drag pour le survol des dossiers
+    rcmail.message_list.addEventListener('dragstart', function (e) { rcmail.drag_start(e); })
+    rcmail.message_list.addEventListener('dragmove', function (e) { rcmail.drag_move(e); })
+    rcmail.message_list.addEventListener('dragend', function (e) { rcmail.drag_end(e); })
+
     rcmail.message_list.addEventListener('dragend', function (data) {
       if (drag_uid && data.target.rel) {
         for (const uid of drag_uid) {
           window.api.send('eml_read', uid)
-
-          window.api.receive('eml_return', (eml) => {
-            rcmail.http_post('mail/plugin.import_message', {
-              _folder: data.target.rel,
-              _message: eml,
-              _uid: uid
-            });
-          });
-
-          rcmail.addEventListener('responseafterplugin.import_message', function (event) {
-            if (event.response.data) {
-              rcmail.message_list.remove_row(event.response.uid);
-              window.api.send('delete_selected_mail', [event.response.uid]);
-              rcmail.display_message('Courriel(s) importé(s) avec succès', 'confirmation');
-            }
-          });
         }
+
+        window.api.receive('eml_return', (eml) => {
+          rcmail.http_post('mail/plugin.import_message', {
+            _folder: data.target.rel,
+            _message: eml.text,
+            _uid: eml.uid
+          });
+        });
+
+        rcmail.addEventListener('responseafterplugin.import_message', function (event) {
+          if (event.response.data) {
+            rcmail.message_list.remove_row(event.response.uid);
+            window.api.send('delete_selected_mail', [event.response.uid]);
+            rcmail.display_message('Courriel(s) importé(s) avec succès', 'confirmation');
+            drag_uid = [];
+          }
+        });
       }
     });
   }
@@ -249,14 +249,14 @@ if (rcmail.env.iselectron) {
 
   function addMessageRow(row, mbox) {
     row.fromto = "<span class='adr'><span class='rcmContactAddress'>" + row.fromto + "</span></span>";
-    let date = new Date(row.date);
-    row.date = date.getUTCDate() + '/' + date.getUTCMonth() + '/' + date.getUTCFullYear() + ' ' + (date.getUTCHours() < 10 ? '0' : '') + date.getUTCHours() + ':' + (date.getUTCMinutes() < 10 ? '0' : '') + date.getUTCMinutes();
+    row.date = formatDate(row.date);
     let etiquettes = JSON.parse(row.etiquettes);
     let seen = etiquettes.SEEN ? 1 : 0;
     let flagged = etiquettes.FLAGGED ? 1 : 0;
     let flags = { "flagged": flagged, "seen": seen, "ctype": row.content_type, "mbox": mbox };
     rcmail.add_message_row(row.id, row, flags, false);
   }
+
 
   //Gestion des lus/non lus
   function read_unread() {
@@ -309,6 +309,19 @@ if (rcmail.env.iselectron) {
         rcmail.display_message('Courriel(s) supprimé(s) avec succès', 'confirmation');
       }
     });
+  }
+
+  function formatDate(row_date) {
+    let date = new Date(row_date);
+    return (date.getUTCDate() < 10 ? '0' : '') + date.getUTCDate() +
+      '/'
+      + (date.getUTCMonth() < 10 ? '0' : '') + date.getUTCMonth() +
+      '/'
+      + date.getUTCFullYear() +
+      ' '
+      + (date.getUTCHours() < 10 ? '0' : '') + date.getUTCHours() +
+      ':'
+      + (date.getUTCMinutes() < 10 ? '0' : '') + date.getUTCMinutes();
   }
 
   function translateFolder(name) {

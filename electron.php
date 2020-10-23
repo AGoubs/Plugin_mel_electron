@@ -67,16 +67,13 @@ class electron extends rcube_plugin
 
     public function import_message()
     {
-
-        $rcmail = rcmail::get_instance();
-
         $folder = rcube_utils::get_input_value('_folder', rcube_utils::INPUT_POST);
         $message = rcube_utils::get_input_value('_message', rcube_utils::INPUT_POST);
         $uid = rcube_utils::get_input_value('_uid', rcube_utils::INPUT_POST);
 
         $imported = 0;
         if (!empty($message)) {
-            $imported += (int) $this->rcmail_save_message($folder, $message);
+            $imported = (int) $this->rcmail_save_message($folder, $message);
         }
 
         header("Content-Type: application/json; charset=" . RCUBE_CHARSET);
@@ -84,8 +81,8 @@ class electron extends rcube_plugin
         $result = array('action' => 'plugin.import_message', 'data' => $imported, 'uid' => $uid);
         echo json_encode($result);
         exit;
-
     }
+
     public function rcmail_save_message($folder, $message)
     {
         if (strncmp($message, 'From ', 5) === 0) {
