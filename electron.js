@@ -19,122 +19,170 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-if (window.api) {
-  rcmail.addEventListener('init', function (evt) {
-    if (rcmail.env.iselectron) {
-      if (window.api) {
-        if (rcmail.env.username) {
-          window.api.send('download_eml', { "token": rcmail.env.request_token });
-        }
-        window.api.send('get_archive_folder')
-        window.api.receive('archive_folder', (folder) => {
-          rcmail.env.local_archive_folder = folder;
-          createFolder();
-          displaySubfolder();
-        });
+if (rcmail.env.iselectron) {
+  if (window.api) {
+    rcmail.addEventListener('init', function (evt) {
+      if (rcmail.env.username) {
+        window.api.send('download_eml', { "token": rcmail.env.request_token });
       }
+      window.api.send('get_archive_folder')
+      window.api.receive('archive_folder', (folder) => {
+        rcmail.env.local_archive_folder = folder;
+        createFolder();
+        displaySubfolder();
+      });
+    });
 
-    }
-  });
-
-  //  ----- Réaffiche les sous-dossier après archivage d'un nouveau dossier -----
-  window.api.receive('new_folder', (folder) => {
-    displaySubfolder();
-  })
-
-  // ----- Ajout des mails dans la liste après archivage -----
-  window.api.receive('add_message_row', (row) => {
-    addMessageRow(row, rcmail.env.local_archive_folder + "/" + row.mbox)
-  })
-
-  // ----- Avancement de l'archivage -----
-  let message_archivage = '';
-  window.api.receive('download-advancement', (data) => {
-    rcmail.hide_message(message_archivage);
-    message_archivage = rcmail.display_message(`Nombre de mails restants : ${data.length}`, 'loading');
-    message_cancel = rcmail.display_message(`Cliquez ici pour arrêter l'archivage`, 'error stop_archivage');
-
-    $('.error.stop_archivage').on('click', function (e) {
-      e.preventDefault();
-      window.api.send('stop-archivage')
+    //  ----- Réaffiche les sous-dossier après archivage d'un nouveau dossier -----
+    window.api.receive('new_folder', (folder) => {
+      displaySubfolder();
     })
 
-    if (data.uid) {
-      console.log(data.mbox);
-      try {
-        rcmail.http_post('mail/delete', {
-          _mbox: data.mbox,
-          _uid: data.uid,
-        });
-      } catch (error) {
-        console.log('Erreur dans la suppression du mail n°' + data.uid);
-      }
-    }
-  })
+    // ----- Ajout des mails dans la liste après archivage -----
+    window.api.receive('add_message_row', (row) => {
+      addMessageRow(row, rcmail.env.local_archive_folder + "/" + row.mbox)
+    })
 
-  // ----- Suppression des mails après archivage -----
-  window.parent.api.receive('download-finish', (file) => {
-    rcmail.hide_message(message_archivage);
-    rcmail.hide_message(message_cancel);
-    rcmail.display_message('Fin du téléchargement des archives', 'confirmation');
-  });
+    // ----- Avancement de l'archivage -----
+    let message_archivage = '';
+    window.api.receive('download-advancement', (data) => {
+      rcmail.hide_message(message_archivage);
+      message_archivage = rcmail.display_message(`Nombre de mails restants : ${data.length}`, 'loading');
+      message_cancel = rcmail.display_message(`Cliquez ici pour arrêter l'archivage`, 'error stop_archivage');
 
-  // -----Affiche le dossier des archives -----
-  function createFolder() {
-    let link = $('<a>').attr('href', '#')
-      .attr('rel', rcmail.env.local_archive_folder)
-      .attr('onClick', "chargementArchivage('')")
-      .html(rcmail.env.local_archive_folder);
-
-    rcmail.treelist.insert({ id: rcmail.env.local_archive_folder, html: link, classes: ['mailbox archives_locales'] });
-    if ($("li.trash").length) {
-      $("li.archives_locales").detach().insertAfter($("li.trash"));
-    }
-  }
-
-  // ----- Affiche les sous-dossier des archives -----
-  function displaySubfolder() {
-    window.api.send('subfolder');
-    window.api.receive('listSubfolder', (subfolders) => {
-      subfolders.forEach(subfolder => {
-        if (subfolder.name == rcmail.env.username) {
-          subfolder.relativePath = '';
-          getChildren(subfolder);
-        }
+      $('.error.stop_archivage').on('click', function (e) {
+        e.preventDefault();
+        window.api.send('stop-archivage')
       })
-    });
-  }
 
-  function getChildren(parent) {
-    if (parent && parent.children) {
-      for (var i = 0, l = parent.children.length; i < l; ++i) {
-        var child = parent.children[i];
-        child.relativePath = child.relativePath.replace(/\\/g, "/");
-        let key = child.relativePath;
-        let link = $('<a>').attr('href', '#')
-          .attr('rel', key)
-          .attr('onClick', "chargementArchivage('" + key + "')")
-          .html(translateFolder(child.name));
-        //On ignore le dossier de l'utilisateur
-        if (parent.relativePath == "") {
-          rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder, 'mailbox');
+      if (data.uid) {
+        try {
+          rcmail.http_post('mail/delete', {
+            _mbox: data.mbox,
+            _uid: data.uid,
+          });
+        } catch (error) {
+          console.log('Erreur dans la suppression du mail n°' + data.uid);
         }
-        //On insère les dossiers sous le dossier principal
-        else {
-          rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder + '/' + parent.relativePath, 'mailbox');
-        }
-        getChildren(child);
+      }
+    })
+
+    // ----- Suppression des mails après archivage -----
+    window.parent.api.receive('download-finish', (file) => {
+      rcmail.hide_message(message_archivage);
+      rcmail.hide_message(message_cancel);
+      rcmail.display_message('Fin du téléchargement des archives', 'confirmation');
+    });
+
+    // -----Affiche le dossier des archives -----
+    function createFolder() {
+      let link = $('<a>').attr('href', '#')
+        .attr('rel', rcmail.env.local_archive_folder)
+        .attr('onClick', "chargementArchivage('')")
+        .html(rcmail.env.local_archive_folder);
+
+      rcmail.treelist.insert({ id: rcmail.env.local_archive_folder, html: link, classes: ['mailbox archives_locales'] });
+      if ($("li.trash").length) {
+        $("li.archives_locales").detach().insertAfter($("li.trash"));
       }
     }
+
+    // ----- Affiche les sous-dossier des archives -----
+    function displaySubfolder() {
+      window.api.send('subfolder');
+      window.api.receive('listSubfolder', (subfolders) => {
+        subfolders.forEach(subfolder => {
+          if (subfolder.name == rcmail.env.username) {
+            subfolder.relativePath = '';
+            getChildren(subfolder);
+          }
+        })
+      });
+    }
+
+    function getChildren(parent) {
+      if (parent && parent.children) {
+        for (var i = 0, l = parent.children.length; i < l; ++i) {
+          var child = parent.children[i];
+          child.relativePath = child.relativePath.replace(/\\/g, "/");
+          let key = child.relativePath;
+          let link = $('<a>').attr('href', '#')
+            .attr('rel', key)
+            .attr('onClick', "chargementArchivage('" + key + "')")
+            .html(translateFolder(child.name));
+          //On ignore le dossier de l'utilisateur
+          if (parent.relativePath == "") {
+            rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder, 'mailbox');
+          }
+          //On insère les dossiers sous le dossier principal
+          else {
+            rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder + '/' + parent.relativePath, 'mailbox');
+          }
+          getChildren(child);
+        }
+      }
+    }
+
+    // ----- Changement de l'environnement et chargement de la liste  ----- 
+    function chargementArchivage(path) {
+      mbox = (path == '') ? rcmail.env.local_archive_folder : rcmail.env.local_archive_folder + "/" + path;
+      rcmail.env.mailbox = mbox;
+
+      loadArchive(path);
+
+      dragEvent();
+      searchEvent();
+      resetSearchEvent(path);
+    }
+
+    // ----- Affiche la liste des messages d'un dossier -----
+    function loadArchive(path) {
+      window.api.send('read_mail_dir', path)
+      window.api.receive('mail_dir', (mails) => {
+        mails.forEach((mail) => {
+          if (mail.break == 0) {
+            addMessageRow(mail, mbox);
+          }
+        });
+
+        read_unread();
+        flag_unflagged();
+      })
+      if (rcmail.message_list) {
+        rcmail.message_list.clear();
+        delete rcmail.message_list._events;
+
+        rcmail.message_list.addEventListener('select', function (list) {
+          deleteSelectedMail(list.get_selection());
+
+          if (list.get_selection().length < 2) {
+            let uid = list.get_selection();
+
+            if (!uid.length && rcmail.env.mailbox != rcmail.env.local_archive_folder) {
+              document.location.reload();
+            }
+            else {
+
+              //Premier index de message_list = MA au lieu de 0
+              if (uid == "MA") {
+                uid = 0;
+              }
+
+              window.api.send('mail_select', uid)
+
+              window.api.receive('mail_return', (mail) => {
+                let body = $("#mainscreen").contents().find('#mailview-bottom');
+                body.html(mail);
+              });
+            }
+          }
+        });
+      }
+    };
+
   }
 
-  // ----- Changement de l'environnement et chargement de la liste  ----- 
-  function chargementArchivage(path) {
-    mbox = (path == '') ? rcmail.env.local_archive_folder : rcmail.env.local_archive_folder + "/" + path;
-    rcmail.env.mailbox = mbox;
-
-    loadArchive(path);
-
+  function searchEvent() {
     //Système de recherche des mails
     $("[name ='rcmqsearchform']").removeAttr('onsubmit').submit(function (e) {
       e.preventDefault();
@@ -148,7 +196,9 @@ if (window.api) {
         }
       });
     });
+  }
 
+  function resetSearchEvent(path) {
     $("#searchreset").on('click', function (e) {
       e.preventDefault();
       rcmail.message_list.clear();
@@ -156,135 +206,142 @@ if (window.api) {
     });
   }
 
-  // ----- Affiche la liste des messages d'un dossier -----
-  function loadArchive(path) {
-    window.api.send('read_mail_dir', path)
-    window.api.receive('mail_dir', (mails) => {
-      mails.forEach((mail) => {
-        if (mail.break == 0) {
-          addMessageRow(mail, mbox);
-        }
-      });
+  function dragEvent() {
+    let drag_uid = [];
 
-      read_unread();
-      flag_unflagged();
+    rcmail.message_list.addEventListener('dragstart', function (data) {
+      drag_uid = data.get_selection();
+    });
+
+    // On importe les events de drag pour le survol des dossiers
+    rcmail.message_list.addEventListener('dragstart', function (e) { rcmail.drag_start(e); })
+    rcmail.message_list.addEventListener('dragmove', function (e) { rcmail.drag_move(e); })
+    rcmail.message_list.addEventListener('dragend', function (e) { rcmail.drag_end(e); })
+
+    rcmail.message_list.addEventListener('dragend', function (data) {
+      if (drag_uid && data.target.rel) {
+        for (const uid of drag_uid) {
+          window.api.send('eml_read', { "uid": uid, "folder": data.target.rel });
+        }
+      }
+    });
+
+    window.api.receive('eml_return', (eml) => {
+      rcmail.http_post('mail/plugin.import_message', {
+        _folder: eml.folder,
+        _message: eml.text,
+        _uid: eml.uid
+      });
+    });
+
+    rcmail.addEventListener('responseafterplugin.import_message', function (event) {
+      if (event.response.data) {
+        rcmail.message_list.remove_row(event.response.uid);
+        window.api.send('delete_selected_mail', [event.response.uid]);
+        rcmail.display_message('Courriel(s) importé(s) avec succès', 'confirmation');
+        drag_uid = [];
+      }
+    });
+  }
+
+  function openAttachment(uid, partid) {
+    window.api.send('attachment_select', { 'uid': uid, 'partid': partid })
+  }
+
+  function addMessageRow(row, mbox) {
+    row.fromto = "<span class='adr'><span class='rcmContactAddress'>" + row.fromto + "</span></span>";
+    row.date = formatDate(row.date);
+    let etiquettes = JSON.parse(row.etiquettes);
+    let seen = etiquettes.SEEN ? 1 : 0;
+    let flagged = etiquettes.FLAGGED ? 1 : 0;
+    let flags = { "flagged": flagged, "seen": seen, "ctype": row.content_type, "mbox": mbox };
+    rcmail.add_message_row(row.id, row, flags, false);
+  }
+
+
+  //Gestion des lus/non lus
+  function read_unread() {
+    $("span[id*='msgicnrcmrow']").unbind('click');
+    $("span[id*='msgicnrcmrow']").click(function () {
+      let seen = $(this).hasClass('unread') ? true : false;
+      let flagged = $(this).closest('tr').hasClass('flagged') ? true : false;
+      $(this).toggleClass('unread');
+      $(this).closest('tr').toggleClass('unread');
+      let uid = $(this).next().attr('href').split('&')[2].split('=')[1];
+      window.api.send('read_unread', { "uid": uid, "SEEN": seen, "FLAGGED": flagged });
+      rcmail.display_message('Courriels marqués avec succès', 'confirmation');
     })
-    if (rcmail.message_list) {
-      rcmail.message_list.clear();
-      delete rcmail.message_list._events;
+  }
 
-      rcmail.message_list.addEventListener('select', function (list) {
-        deleteSelectedMail(list.get_selection());
+  //Gestion des flags
+  function flag_unflagged() {
+    $("span[id*='flagicnrcmrow']").unbind('click');
+    $("span[id*='flagicnrcmrow']").click(function () {
+      let flagged = $(this).hasClass('flagged') ? false : true;
+      if (!flagged) {
+        $(this).addClass('unflagged').removeClass('flagged');
+      }
+      else {
+        $(this).addClass('flagged').removeClass('unflagged');
+      }
+      $(this).closest('tr').toggleClass('flagged');
 
-        if (list.selection.length = 1) {
+      let seen = $(this).closest('tr').hasClass('unread') ? false : true;
 
-          let uid = list.get_single_selection();
+      let uid = $(this).closest('tr').find('a').attr('href').split('&')[2].split('=')[1];
+      window.api.send('flag_unflagged', { "uid": uid, "SEEN": seen, "FLAGGED": flagged });
+      rcmail.display_message('Courriels marqués avec succès', 'confirmation');
+    })
+  }
 
-          if (uid == null && rcmail.env.mailbox != rcmail.env.local_archive_folder) {
-            document.location.reload();
-          }
-
-          //Premier index de message_list = MA au lieu de 0
-          if (uid == "MA") {
-            uid = 0;
-          }
-
-          window.api.send('mail_select', uid)
-
-          window.api.receive('mail_return', (mail) => {
-            let body = $("#mainscreen").contents().find('#mailview-bottom');
-            body.html(mail);
-          });
+  function deleteSelectedMail(uids) {
+    rcmail.enable_command('delete', true);
+    $(".button.delete").unbind('click');
+    $('.button.delete').removeAttr("onclick").removeAttr('href');
+    $('.button.delete').on('click', function (e) {
+      e.preventDefault();
+      if (confirm('Voulez-vous supprimer le(s) mail(s) sélectionné(s) ?')) {
+        for (const uid of uids) {
+          rcmail.message_list.remove_row(uid);
         }
-      });
-    }
-  };
-
-}
-
-function openAttachment(uid, partid) {
-  window.api.send('attachment_select', { 'uid': uid, 'partid': partid })
-}
-
-function addMessageRow(row, mbox) {
-  row.fromto = "<span class='adr'><span class='rcmContactAddress'>" + row.fromto + "</span></span>";
-  let date = new Date(row.date);
-  row.date = date.getUTCDate() + '/' + date.getUTCMonth() + '/' + date.getUTCFullYear() + ' ' + (date.getUTCHours()<10?'0':'') + date.getUTCHours() + ':' + (date.getUTCMinutes()<10?'0':'') + date.getUTCMinutes();
-  let etiquettes = JSON.parse(row.etiquettes);
-  let seen = etiquettes.SEEN ? 1 : 0;
-  let flagged = etiquettes.FLAGGED ? 1 : 0;
-  let flags = { "flagged": flagged, "seen": seen, "ctype": row.content_type, "mbox": mbox };
-  rcmail.add_message_row(row.id, row, flags, false);
-}
-
-//Gestion des lus/non lus
-function read_unread() {
-  $("span[id*='msgicnrcmrow']").unbind('click');
-  $("span[id*='msgicnrcmrow']").click(function () {
-    let seen = $(this).hasClass('unread') ? true : false;
-    let flagged = $(this).closest('tr').hasClass('flagged') ? true : false;
-    $(this).toggleClass('unread');
-    $(this).closest('tr').toggleClass('unread');
-    let uid = $(this).next().attr('href').split('&')[2].split('=')[1];
-    window.api.send('read_unread', { "uid": uid, "SEEN": seen, "FLAGGED": flagged });
-    rcmail.display_message('Courriels marqués avec succès', 'confirmation');
-  })
-}
-
-//Gestion des flags
-function flag_unflagged() {
-  $("span[id*='flagicnrcmrow']").unbind('click');
-  $("span[id*='flagicnrcmrow']").click(function () {
-    let flagged = $(this).hasClass('flagged') ? false : true;
-    if (!flagged) {
-      $(this).addClass('unflagged').removeClass('flagged');
-    }
-    else {
-      $(this).addClass('flagged').removeClass('unflagged');
-    }
-    $(this).closest('tr').toggleClass('flagged');
-
-    let seen = $(this).closest('tr').hasClass('unread') ? false : true;
-
-    let uid = $(this).closest('tr').find('a').attr('href').split('&')[2].split('=')[1];
-    window.api.send('flag_unflagged', { "uid": uid, "SEEN": seen, "FLAGGED": flagged });
-    rcmail.display_message('Courriels marqués avec succès', 'confirmation');
-  })
-}
-
-function deleteSelectedMail(uids) {
-  rcmail.enable_command('delete', true);
-  $(".button.delete").unbind('click');
-  $('.button.delete').removeAttr("onclick").removeAttr('href');
-  $('.button.delete').on('click', function (e) {
-    e.preventDefault();
-    if (confirm('Voulez-vous supprimer le(s) mail(s) sélectionné(s) ?')) {
-      for (const uid of uids) {
-        rcmail.message_list.remove_row(uid);
-        window.api.send('delete_selected_mail', uid);
+        window.api.send('delete_selected_mail', uids);
         let body = $("#mainscreen").contents().find('#mailview-bottom');
         body.html('');
+        rcmail.display_message('Courriel(s) supprimé(s) avec succès', 'confirmation');
       }
-    }
-  });
-}
-
-function translateFolder(name) {
-  switch (name) {
-    case 'INBOX':
-      return 'Boite de réception'
-    case 'Drafts':
-      return 'Brouillons'
-    case 'Sent':
-      return 'Envoyés'
-    case 'Trash':
-      return 'Corbeille'
-    case 'Junk':
-      return 'Indésirable'
-    case 'Templates':
-      return 'Modèles'
-    default:
-      return name;
+    });
   }
-}
 
+  function formatDate(row_date) {
+    let date = new Date(row_date);
+    return (date.getUTCDate() < 10 ? '0' : '') + date.getUTCDate() +
+      '/'
+      + (date.getUTCMonth() < 10 ? '0' : '') + date.getUTCMonth() +
+      '/'
+      + date.getUTCFullYear() +
+      ' '
+      + (date.getUTCHours() < 10 ? '0' : '') + date.getUTCHours() +
+      ':'
+      + (date.getUTCMinutes() < 10 ? '0' : '') + date.getUTCMinutes();
+  }
+
+  function translateFolder(name) {
+    switch (name) {
+      case 'INBOX':
+        return 'Boite de réception'
+      case 'Drafts':
+        return 'Brouillons'
+      case 'Sent':
+        return 'Envoyés'
+      case 'Trash':
+        return 'Corbeille'
+      case 'Junk':
+        return 'Indésirable'
+      case 'Templates':
+        return 'Modèles'
+      default:
+        return name;
+    }
+  }
+
+}
