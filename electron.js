@@ -135,7 +135,9 @@ if (rcmail.env.iselectron) {
       rcmail.env.mailbox = mbox;
 
       displayMessageList(path);
-      selectEvent();
+      rcmail.message_list
+        .addEventListener('select', function (o) { selectEvent(o) });
+
       dragEvent();
       searchEvent();
       resetSearchEvent(path);
@@ -158,196 +160,189 @@ if (rcmail.env.iselectron) {
     }
 
     //Ajout de l'évènement de sélection d'un mail 
-    function selectEvent() {
-      if (rcmail.message_list) {
-        rcmail.message_list.addEventListener('select', function (list) {
-          let uid = list.get_selection();
+    function selectEvent(list) {
+      let uid = list.get_selection();
 
-          deleteMails(uid);
-          
-          if (list.get_selection().length < 2) {
+      deleteMails(uid);
 
-            if (!uid.length && rcmail.env.mailbox != rcmail.env.local_archive_folder) {
-              document.location.reload();
-            }
-              //Premier index de message_list = 0 au lieu de 'MA'
-              if (uid == "MA") {
-                uid = 0;
-              }
+      if (list.get_selection().length < 2) {
+        if (!uid.length && rcmail.env.mailbox != rcmail.env.local_archive_folder) {
+          document.location.reload();
+        }
+        //Premier index de message_list = 0 au lieu de 'MA'
+        if (uid == "MA") {
+          uid = 0;
+        }
 
-              window.api.send('mail_select', uid)
+        window.api.send('mail_select', uid)
 
-              window.api.receive('mail_return', (mail) => {
-                let body = $("#mainscreen").contents().find('#mailview-bottom');
-                body.html(mail);
-              });
-            
-          }
+        window.api.receive('mail_return', (mail) => {
+          let body = $("#mainscreen").contents().find('#mailview-bottom');
+          body.html(mail);
         });
       }
     };
-  }
 
-  function dragEvent() {
-    let drag_uid = [];
+    function dragEvent() {
+      let drag_uid = [];
 
-    rcmail.message_list.addEventListener('dragstart', function (data) {
-      drag_uid = data.get_selection();
-    });
-
-    // On importe les events de drag pour le survol des dossiers
-    rcmail.message_list.addEventListener('dragstart', function (e) { rcmail.drag_start(e); })
-    rcmail.message_list.addEventListener('dragmove', function (e) { rcmail.drag_move(e); })
-    rcmail.message_list.addEventListener('dragend', function (e) { rcmail.drag_end(e); })
-
-    rcmail.message_list.addEventListener('dragend', function (data) {
-      if (drag_uid && data.target.rel) {
-        for (const uid of drag_uid) {
-          window.api.send('eml_read', { "uid": uid, "folder": data.target.rel });
-        }
-      }
-    });    
-    
-    window.api.receive('eml_return', (eml) => {
-      rcmail.http_post('mail/plugin.import_message', {
-        _folder: eml.folder,
-        _message: eml.text,
-        _uid: eml.uid
+      rcmail.message_list.addEventListener('dragstart', function (data) {
+        drag_uid = data.get_selection();
       });
-    });
 
-    rcmail.addEventListener('responseafterplugin.import_message', function (event) {
-      if (event.response.data) {
-        rcmail.message_list.remove_row(event.response.uid);
-        window.api.send('delete_selected_mail', [event.response.uid]);
-        rcmail.display_message('Courriel(s) importé(s) avec succès', 'confirmation');
-        drag_uid = [];
-      }
-    });
-  }
+      // On importe les events de drag pour le survol des dossiers
+      rcmail.message_list.addEventListener('dragstart', function (e) { rcmail.drag_start(e); })
+      rcmail.message_list.addEventListener('dragmove', function (e) { rcmail.drag_move(e); })
+      rcmail.message_list.addEventListener('dragend', function (e) { rcmail.drag_end(e); })
 
-  function searchEvent() {
-    //Système de recherche des mails
-    $("[name ='rcmqsearchform']").removeAttr('onsubmit').submit(function (e) {
-      e.preventDefault();
-      window.api.send('search_list', { "value": $('#quicksearchbox').val(), "subfolder": rcmail.env.mailbox.replace(rcmail.env.local_archive_folder + "/", "") });
-      window.api.receive('result_search', (rows) => {
-        rcmail.message_list.clear();
-        for (const row of rows) {
-          if (row.break == 0) {
-            addMessageRow(row, rcmail.env.local_archive_folder + "/" + row.subfolder);
+      rcmail.message_list.addEventListener('dragend', function (data) {
+        if (drag_uid && data.target.rel) {
+          for (const uid of drag_uid) {
+            window.api.send('eml_read', { "uid": uid, "folder": data.target.rel });
           }
         }
       });
-    });
-  }
 
-  function resetSearchEvent(path) {
-    $("#searchreset").on('click', function (e) {
-      e.preventDefault();
-      rcmail.message_list.clear();
-      displayMessageList(path);
-    });
-  }
+      window.api.receive('eml_return', (eml) => {
+        rcmail.http_post('mail/plugin.import_message', {
+          _folder: eml.folder,
+          _message: eml.text,
+          _uid: eml.uid
+        });
+      });
 
-  function openAttachment(uid, partid) {
-    window.api.send('attachment_select', { 'uid': uid, 'partid': partid })
-  }
-
-  function addMessageRow(row, mbox) {
-    row.fromto = "<span class='adr'><span class='rcmContactAddress'>" + row.fromto + "</span></span>";
-    row.date = formatDate(row.date);
-    let etiquettes = JSON.parse(row.etiquettes);
-    let seen = etiquettes.SEEN ? 1 : 0;
-    let flagged = etiquettes.FLAGGED ? 1 : 0;
-    let flags = { "flagged": flagged, "seen": seen, "ctype": row.content_type, "mbox": mbox };
-    rcmail.add_message_row(row.id, row, flags, false);
-  }
-
-
-  //Gestion des lus/non lus
-  function read_unread() {
-    $("span[id*='msgicnrcmrow']").unbind('click');
-    $("span[id*='msgicnrcmrow']").click(function () {
-      let seen = $(this).hasClass('unread') ? true : false;
-      let flagged = $(this).closest('tr').hasClass('flagged') ? true : false;
-      $(this).toggleClass('unread');
-      $(this).closest('tr').toggleClass('unread');
-      let uid = $(this).next().attr('href').split('&')[2].split('=')[1];
-      window.api.send('read_unread', { "uid": uid, "SEEN": seen, "FLAGGED": flagged });
-      rcmail.display_message('Courriels marqués avec succès', 'confirmation');
-    })
-  }
-
-  //Gestion des flags
-  function flag_unflagged() {
-    $("span[id*='flagicnrcmrow']").unbind('click');
-    $("span[id*='flagicnrcmrow']").click(function () {
-      let flagged = $(this).hasClass('flagged') ? false : true;
-      if (!flagged) {
-        $(this).addClass('unflagged').removeClass('flagged');
-      }
-      else {
-        $(this).addClass('flagged').removeClass('unflagged');
-      }
-      $(this).closest('tr').toggleClass('flagged');
-
-      let seen = $(this).closest('tr').hasClass('unread') ? false : true;
-
-      let uid = $(this).closest('tr').find('a').attr('href').split('&')[2].split('=')[1];
-      window.api.send('flag_unflagged', { "uid": uid, "SEEN": seen, "FLAGGED": flagged });
-      rcmail.display_message('Courriels marqués avec succès', 'confirmation');
-    })
-  }
-
-  function deleteMails(uids) {
-    rcmail.enable_command('delete', true);
-    $(".button.delete").unbind('click');
-    $('.button.delete').removeAttr("onclick").removeAttr('href');
-    $('.button.delete').on('click', function (e) {
-      e.preventDefault();
-      if (confirm('Voulez-vous supprimer le(s) mail(s) sélectionné(s) ?')) {
-        for (const uid of uids) {
-          rcmail.message_list.remove_row(uid);
+      rcmail.addEventListener('responseafterplugin.import_message', function (event) {
+        if (event.response.data) {
+          rcmail.message_list.remove_row(event.response.uid);
+          window.api.send('delete_selected_mail', [event.response.uid]);
+          rcmail.display_message('Courriel(s) importé(s) avec succès', 'confirmation');
+          drag_uid = [];
         }
-        window.api.send('delete_selected_mail', uids);
-        let body = $("#mainscreen").contents().find('#mailview-bottom');
-        body.html('');
-        rcmail.display_message('Courriel(s) supprimé(s) avec succès', 'confirmation');
+      });
+    }
+
+    function searchEvent() {
+      //Système de recherche des mails
+      $("[name ='rcmqsearchform']").removeAttr('onsubmit').submit(function (e) {
+        e.preventDefault();
+        window.api.send('search_list', { "value": $('#quicksearchbox').val(), "subfolder": rcmail.env.mailbox.replace(rcmail.env.local_archive_folder + "/", "") });
+        window.api.receive('result_search', (rows) => {
+          rcmail.message_list.clear();
+          for (const row of rows) {
+            if (row.break == 0) {
+              addMessageRow(row, rcmail.env.local_archive_folder + "/" + row.subfolder);
+            }
+          }
+        });
+      });
+    }
+
+    function resetSearchEvent(path) {
+      $("#searchreset").on('click', function (e) {
+        e.preventDefault();
+        rcmail.message_list.clear();
+        displayMessageList(path);
+      });
+    }
+
+    function openAttachment(uid, partid) {
+      window.api.send('attachment_select', { 'uid': uid, 'partid': partid })
+    }
+
+    function addMessageRow(row, mbox) {
+      row.fromto = "<span class='adr'><span class='rcmContactAddress'>" + row.fromto + "</span></span>";
+      row.date = formatDate(row.date);
+      let etiquettes = JSON.parse(row.etiquettes);
+      let seen = etiquettes.SEEN ? 1 : 0;
+      let flagged = etiquettes.FLAGGED ? 1 : 0;
+      let flags = { "flagged": flagged, "seen": seen, "ctype": row.content_type, "mbox": mbox };
+      rcmail.add_message_row(row.id, row, flags, false);
+    }
+
+
+    //Gestion des lus/non lus
+    function read_unread() {
+      $("span[id*='msgicnrcmrow']").unbind('click');
+      $("span[id*='msgicnrcmrow']").click(function () {
+        let seen = $(this).hasClass('unread') ? true : false;
+        let flagged = $(this).closest('tr').hasClass('flagged') ? true : false;
+        $(this).toggleClass('unread');
+        $(this).closest('tr').toggleClass('unread');
+        let uid = $(this).next().attr('href').split('&')[2].split('=')[1];
+        window.api.send('read_unread', { "uid": uid, "SEEN": seen, "FLAGGED": flagged });
+        rcmail.display_message('Courriels marqués avec succès', 'confirmation');
+      })
+    }
+
+    //Gestion des flags
+    function flag_unflagged() {
+      $("span[id*='flagicnrcmrow']").unbind('click');
+      $("span[id*='flagicnrcmrow']").click(function () {
+        let flagged = $(this).hasClass('flagged') ? false : true;
+        if (!flagged) {
+          $(this).addClass('unflagged').removeClass('flagged');
+        }
+        else {
+          $(this).addClass('flagged').removeClass('unflagged');
+        }
+        $(this).closest('tr').toggleClass('flagged');
+
+        let seen = $(this).closest('tr').hasClass('unread') ? false : true;
+
+        let uid = $(this).closest('tr').find('a').attr('href').split('&')[2].split('=')[1];
+        window.api.send('flag_unflagged', { "uid": uid, "SEEN": seen, "FLAGGED": flagged });
+        rcmail.display_message('Courriels marqués avec succès', 'confirmation');
+      })
+    }
+
+    function deleteMails(uids) {
+      rcmail.enable_command('delete', true);
+      $(".button.delete").unbind('click');
+      $('.button.delete').removeAttr("onclick").removeAttr('href');
+      $('.button.delete').on('click', function (e) {
+        e.preventDefault();
+        if (confirm('Voulez-vous supprimer le(s) mail(s) sélectionné(s) ?')) {
+          for (const uid of uids) {
+            rcmail.message_list.remove_row(uid);
+          }
+          window.api.send('delete_selected_mail', uids);
+          let body = $("#mainscreen").contents().find('#mailview-bottom');
+          body.html('');
+          rcmail.display_message('Courriel(s) supprimé(s) avec succès', 'confirmation');
+        }
+      });
+    }
+
+    function formatDate(row_date) {
+      let date = new Date(row_date);
+      return (date.getUTCDate() < 10 ? '0' : '') + date.getUTCDate() +
+        '/'
+        + (date.getUTCMonth() < 10 ? '0' : '') + date.getUTCMonth() +
+        '/'
+        + date.getUTCFullYear() +
+        ' '
+        + (date.getUTCHours() < 10 ? '0' : '') + date.getUTCHours() +
+        ':'
+        + (date.getUTCMinutes() < 10 ? '0' : '') + date.getUTCMinutes();
+    }
+
+    function translateFolder(name) {
+      switch (name) {
+        case 'INBOX':
+          return 'Boite de réception'
+        case 'Drafts':
+          return 'Brouillons'
+        case 'Sent':
+          return 'Envoyés'
+        case 'Trash':
+          return 'Corbeille'
+        case 'Junk':
+          return 'Indésirable'
+        case 'Templates':
+          return 'Modèles'
+        default:
+          return name;
       }
-    });
-  }
-
-  function formatDate(row_date) {
-    let date = new Date(row_date);
-    return (date.getUTCDate() < 10 ? '0' : '') + date.getUTCDate() +
-      '/'
-      + (date.getUTCMonth() < 10 ? '0' : '') + date.getUTCMonth() +
-      '/'
-      + date.getUTCFullYear() +
-      ' '
-      + (date.getUTCHours() < 10 ? '0' : '') + date.getUTCHours() +
-      ':'
-      + (date.getUTCMinutes() < 10 ? '0' : '') + date.getUTCMinutes();
-  }
-
-  function translateFolder(name) {
-    switch (name) {
-      case 'INBOX':
-        return 'Boite de réception'
-      case 'Drafts':
-        return 'Brouillons'
-      case 'Sent':
-        return 'Envoyés'
-      case 'Trash':
-        return 'Corbeille'
-      case 'Junk':
-        return 'Indésirable'
-      case 'Templates':
-        return 'Modèles'
-      default:
-        return name;
     }
   }
-
 }
