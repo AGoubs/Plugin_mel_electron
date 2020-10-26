@@ -208,6 +208,7 @@ if (rcmail.env.iselectron) {
 
   function dragEvent() {
     let drag_uid = [];
+
     rcmail.message_list.addEventListener('dragstart', function (data) {
       drag_uid = data.get_selection();
     });
@@ -220,25 +221,25 @@ if (rcmail.env.iselectron) {
     rcmail.message_list.addEventListener('dragend', function (data) {
       if (drag_uid && data.target.rel) {
         for (const uid of drag_uid) {
-          window.api.send('eml_read', uid)
+          window.api.send('eml_read', { "uid": uid, "folder": data.target.rel });
         }
+      }
+    });
 
-        window.api.receive('eml_return', (eml) => {
-          rcmail.http_post('mail/plugin.import_message', {
-            _folder: data.target.rel,
-            _message: eml.text,
-            _uid: eml.uid
-          });
-        });
+    window.api.receive('eml_return', (eml) => {
+      rcmail.http_post('mail/plugin.import_message', {
+        _folder: eml.folder,
+        _message: eml.text,
+        _uid: eml.uid
+      });
+    });
 
-        rcmail.addEventListener('responseafterplugin.import_message', function (event) {
-          if (event.response.data) {
-            rcmail.message_list.remove_row(event.response.uid);
-            window.api.send('delete_selected_mail', [event.response.uid]);
-            rcmail.display_message('Courriel(s) importé(s) avec succès', 'confirmation');
-            drag_uid = [];
-          }
-        });
+    rcmail.addEventListener('responseafterplugin.import_message', function (event) {
+      if (event.response.data) {
+        rcmail.message_list.remove_row(event.response.uid);
+        window.api.send('delete_selected_mail', [event.response.uid]);
+        rcmail.display_message('Courriel(s) importé(s) avec succès', 'confirmation');
+        drag_uid = [];
       }
     });
   }
