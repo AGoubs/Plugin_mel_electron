@@ -38,6 +38,9 @@ if (rcmail.env.iselectron) {
         createFolder();
         displaySubfolder();
       });
+      rcmail.message_list
+        .addEventListener('dragstart', function (o) { drag_start(o); })
+        .addEventListener('dragend', function (o) { drag_end_archive(o) })
     });
 
     //  ----- Réaffiche les sous-dossier après archivage d'un nouveau dossier -----
@@ -191,6 +194,8 @@ if (rcmail.env.iselectron) {
             .addEventListener('column_replace', function (o) { rcmail.msglist_set_coltypes(o); })
             .addEventListener('listupdate', function (o) { rcmail.triggerEvent('listupdate', o); })
             .init();
+
+            console.log(rcmail.message_list._events);
         }
         //Premier index de message_list = 0 au lieu de 'MA'
         if (uid == "MA") {
@@ -226,33 +231,35 @@ if (rcmail.env.iselectron) {
 
     function drag_end_archive(list) {
       if (drag_uid && list.target.rel) {
-        if (list.target.rel.includes(rcmail.env.username)) {
+        if (list.target.rel.includes(rcmail.env.username) || list.target.rel == rcmail.env.local_archive_folder) {
           rcmail.http_get('mail/plugin.mel_archivage_traitement_electron', {
             _mbox: rcmail.env.mailbox,
             _account: rcmail.env.account,
             _uids: drag_uid,
           });
-          rcmail.addEventListener('responseafterplugin.mel_archivage_traitement_electron', function (event) {
-            let stringified = JSON.stringify(event.response.data);
-            let parsedObj = JSON.parse(stringified);
-            let files = [];
-            for (const mbox in parsedObj) {
-              for (let i = 0; i < parsedObj[mbox].length; i++) {
-                const uid = parsedObj[mbox][i];
-                uid.flags = (Array.isArray(uid.flags)) ? { "SEEN": false } : uid.flags;
-                if (!uid.flags.hasOwnProperty('SEEN')) {
-                  uid.flags.SEEN = false;
-                }
-                files.push({ "url": rcmail.url('mail/viewsource', rcmail.params_from_uid(uid.message_uid)).concat("&_save=1"), "uid": uid.message_uid, "path_folder": rcmail.env.username + "/" + mbox, "mbox": mbox, "etiquettes": uid.flags });
-              }
-              window.parent.api.send('download_eml', { "files": files, "token": rcmail.env.request_token });
-              console.log({ "files": files, "token": rcmail.env.request_token });
-              $("#nb_mails").text(rcmail.get_label('mel_archivage.archive_downloading'));
-            }
-          });
+          
         }
       }
     }
+
+    rcmail.addEventListener('responseafterplugin.mel_archivage_traitement_electron', function (event) {
+      console.log(event.response.data);
+      let stringified = JSON.stringify(event.response.data);
+      let parsedObj = JSON.parse(stringified);
+      let files = [];
+      for (const mbox in parsedObj) {
+        for (let i = 0; i < parsedObj[mbox].length; i++) {
+          const uid = parsedObj[mbox][i];
+          uid.flags = (Array.isArray(uid.flags)) ? { "SEEN": false } : uid.flags;
+          if (!uid.flags.hasOwnProperty('SEEN')) {
+            uid.flags.SEEN = false;
+          }
+          files.push({ "url": rcmail.url('mail/viewsource', rcmail.params_from_uid(uid.message_uid)).concat("&_save=1"), "uid": uid.message_uid, "path_folder": rcmail.env.username + "/" + mbox, "mbox": mbox, "etiquettes": uid.flags });
+        }
+        window.parent.api.send('download_eml', { "files": files, "token": rcmail.env.request_token });
+        $("#nb_mails").text(rcmail.get_label('mel_archivage.archive_downloading'));
+      }
+    });
 
     window.api.receive('eml_return', (eml) => {
       console.log(eml);
