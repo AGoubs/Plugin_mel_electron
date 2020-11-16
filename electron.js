@@ -21,6 +21,10 @@
  */
 if (rcmail.env.iselectron) {
   if (window.api) {
+    //Définition variables globales
+    let searchform_onsubmit;
+    let events;
+
     rcmail.addEventListener('init', function (evt) {
       if (rcmail.env.username) {
         //On finit de télécharger les archives s'il en reste
@@ -131,14 +135,19 @@ if (rcmail.env.iselectron) {
     function chargementArchivage(path) {
       delete rcmail.message_list._events;
 
+      hideSelectedMail()
+
       mbox = (path == '') ? rcmail.env.local_archive_folder : rcmail.env.local_archive_folder + "/" + path;
       rcmail.env.mailbox = mbox;
 
       displayMessageList(path);
-      selectEvent();
-      dragEvent();
-      searchEvent();
-      resetSearchEvent(path);
+      rcmail.message_list
+        .addEventListener('select', function (o) { messagelist_select(o) })
+        .addEventListener('dragstart', function (o) { drag_start(o) })
+        .addEventListener('dragend', function (o) { drag_end_import(o) });
+
+      search_form();
+      reset_search_form(path);
     }
 
     // ----- Affiche la liste des messages d'un dossier -----
@@ -158,57 +167,95 @@ if (rcmail.env.iselectron) {
     }
 
     //Ajout de l'évènement de sélection d'un mail 
-    function selectEvent() {
-      if (rcmail.message_list) {
-        rcmail.message_list.addEventListener('select', function (list) {
-          let uid = list.get_selection();
+    let messagelist_select = function (list) {
+      let uid = list.get_selection();
 
-          deleteMails(uid);
-          
-          if (list.get_selection().length < 2) {
+      deleteMails(uid);
 
-            if (!uid.length && rcmail.env.mailbox != rcmail.env.local_archive_folder) {
-              document.location.reload();
-            }
-              //Premier index de message_list = 0 au lieu de 'MA'
-              if (uid == "MA") {
-                uid = 0;
-              }
+      if (list.get_selection().length < 2) {
+        if (!uid.length && rcmail.env.mailbox != rcmail.env.local_archive_folder) {
+          cancel_search_form();
+          cancel_reset_search_form();
+          delete rcmail.message_list._events;
+          rcmail.message_list
+            .addEventListener('initrow', function (o) { rcmail.init_message_row(o); })
+            .addEventListener('dblclick', function (o) { rcmail.msglist_dbl_click(o); })
+            .addEventListener('keypress', function (o) { rcmail.msglist_keypress(o); })
+            .addEventListener('select', function (o) { rcmail.msglist_select(o); })
+            .addEventListener('dragstart', function (o) { rcmail.drag_start(o); })
+            .addEventListener('dragstart', function (o) { drag_start(o); })
+            .addEventListener('dragmove', function (e) { rcmail.drag_move(e); })
+            .addEventListener('dragend', function (e) { rcmail.drag_end(e); })
+            .addEventListener('dragend', function (o) { drag_end_archive(o) })
+            .addEventListener('expandcollapse', function (o) { rcmail.msglist_expand(o); })
+            .addEventListener('column_replace', function (o) { rcmail.msglist_set_coltypes(o); })
+            .addEventListener('listupdate', function (o) { rcmail.triggerEvent('listupdate', o); })
+            .init();
+        }
+        //Premier index de message_list = 0 au lieu de 'MA'
+        if (uid == "MA") {
+          uid = 0;
+        }
 
-              window.api.send('mail_select', uid)
+        window.api.send('mail_select', uid)
 
-              window.api.receive('mail_return', (mail) => {
-                let body = $("#mainscreen").contents().find('#mailview-bottom');
-                body.html(mail);
-              });
-            
-          }
+        window.api.receive('mail_return', (mail) => {
+          var doc = document.getElementById('messagecontframe').contentWindow.document;
+          doc.open();
+          doc.write(mail);
+          doc.close();
         });
       }
     };
-  }
 
-  function dragEvent() {
     let drag_uid = [];
+    function drag_start(list) {
+      drag_uid = list.get_selection();
+    }
 
-    rcmail.message_list.addEventListener('dragstart', function (data) {
-      drag_uid = data.get_selection();
-    });
-
-    // On importe les events de drag pour le survol des dossiers
-    rcmail.message_list.addEventListener('dragstart', function (e) { rcmail.drag_start(e); })
-    rcmail.message_list.addEventListener('dragmove', function (e) { rcmail.drag_move(e); })
-    rcmail.message_list.addEventListener('dragend', function (e) { rcmail.drag_end(e); })
-
-    rcmail.message_list.addEventListener('dragend', function (data) {
-      if (drag_uid && data.target.rel) {
-        for (const uid of drag_uid) {
-          window.api.send('eml_read', { "uid": uid, "folder": data.target.rel });
+    function drag_end_import(list) {
+      if (drag_uid && list.target.rel) {
+        console.log(list.target.rel);
+        if (!list.target.rel.includes(rcmail.env.username)) {
+          for (const uid of drag_uid) {
+            window.api.send('eml_read', { "uid": uid, "folder": list.target.rel });
+          }
         }
       }
-    });    
-    
+    }
+
+    function drag_end_archive(list) {
+      if (drag_uid && list.target.rel) {
+        if (list.target.rel.includes(rcmail.env.username)) {
+          rcmail.http_get('mail/plugin.mel_archivage_traitement_electron', {
+            _mbox: rcmail.env.mailbox,
+            _account: rcmail.env.account,
+            _uids: drag_uid,
+          });
+          rcmail.addEventListener('responseafterplugin.mel_archivage_traitement_electron', function (event) {
+            let stringified = JSON.stringify(event.response.data);
+            let parsedObj = JSON.parse(stringified);
+            let files = [];
+            for (const mbox in parsedObj) {
+              for (let i = 0; i < parsedObj[mbox].length; i++) {
+                const uid = parsedObj[mbox][i];
+                uid.flags = (Array.isArray(uid.flags)) ? { "SEEN": false } : uid.flags;
+                if (!uid.flags.hasOwnProperty('SEEN')) {
+                  uid.flags.SEEN = false;
+                }
+                files.push({ "url": rcmail.url('mail/viewsource', rcmail.params_from_uid(uid.message_uid)).concat("&_save=1"), "uid": uid.message_uid, "path_folder": rcmail.env.username + "/" + mbox, "mbox": mbox, "etiquettes": uid.flags });
+              }
+              window.parent.api.send('download_eml', { "files": files, "token": rcmail.env.request_token });
+              console.log({ "files": files, "token": rcmail.env.request_token });
+              $("#nb_mails").text(rcmail.get_label('mel_archivage.archive_downloading'));
+            }
+          });
+        }
+      }
+    }
+
     window.api.receive('eml_return', (eml) => {
+      console.log(eml);
       rcmail.http_post('mail/plugin.import_message', {
         _folder: eml.folder,
         _message: eml.text,
@@ -224,130 +271,146 @@ if (rcmail.env.iselectron) {
         drag_uid = [];
       }
     });
-  }
 
-  function searchEvent() {
-    //Système de recherche des mails
-    $("[name ='rcmqsearchform']").removeAttr('onsubmit').submit(function (e) {
-      e.preventDefault();
-      window.api.send('search_list', { "value": $('#quicksearchbox').val(), "subfolder": rcmail.env.mailbox.replace(rcmail.env.local_archive_folder + "/", "") });
-      window.api.receive('result_search', (rows) => {
-        rcmail.message_list.clear();
-        for (const row of rows) {
-          if (row.break == 0) {
-            addMessageRow(row, rcmail.env.local_archive_folder + "/" + row.subfolder);
+
+    function search_form() {
+      //Système de recherche des mails
+      searchform_onsubmit = $("[name ='rcmqsearchform']").attr('onsubmit');
+      $("[name ='rcmqsearchform']").removeAttr('onsubmit').submit(function (e) {
+        e.preventDefault();
+        window.api.send('search_list', { "value": $('#quicksearchbox').val(), "subfolder": rcmail.env.mailbox.replace(rcmail.env.local_archive_folder + "/", "") });
+        window.api.receive('result_search', (rows) => {
+          rcmail.message_list.clear();
+          for (const row of rows) {
+            if (row.break == 0) {
+              addMessageRow(row, rcmail.env.local_archive_folder + "/" + row.subfolder);
+            }
           }
+        });
+      });
+    }
+
+    function cancel_search_form() {
+      $("[name ='rcmqsearchform']").attr('onsubmit', searchform_onsubmit);
+    }
+
+    function reset_search_form(path) {
+      $("#searchreset").on('click', function (e) {
+        e.preventDefault();
+        rcmail.message_list.clear();
+        displayMessageList(path);
+      });
+    }
+
+    function cancel_reset_search_form() {
+      $("#searchreset").unbind('click');
+    }
+
+    function openAttachment(uid, partid) {
+      window.api.send('attachment_select', { 'uid': uid, 'partid': partid })
+    }
+
+    function addMessageRow(row, mbox) {
+      row.fromto = "<span class='adr'><span class='rcmContactAddress'>" + row.fromto + "</span></span>";
+      row.date = formatDate(row.date);
+      let etiquettes = JSON.parse(row.etiquettes);
+      let seen = etiquettes.SEEN ? 1 : 0;
+      let flagged = etiquettes.FLAGGED ? 1 : 0;
+      let flags = { "flagged": flagged, "seen": seen, "ctype": row.content_type, "mbox": mbox };
+      rcmail.add_message_row(row.id, row, flags, false);
+    }
+
+
+    //Gestion des lus/non lus
+    function read_unread() {
+      $("span[id*='msgicnrcmrow']").unbind('click');
+      $("span[id*='msgicnrcmrow']").click(function () {
+        let seen = $(this).hasClass('unread') ? true : false;
+        let flagged = $(this).closest('tr').hasClass('flagged') ? true : false;
+        $(this).toggleClass('unread');
+        $(this).closest('tr').toggleClass('unread');
+        let uid = $(this).next().attr('href').split('&')[2].split('=')[1];
+        window.api.send('read_unread', { "uid": uid, "SEEN": seen, "FLAGGED": flagged });
+        rcmail.display_message('Courriels marqués avec succès', 'confirmation');
+      })
+    }
+
+    //Gestion des flags
+    function flag_unflagged() {
+      $("span[id*='flagicnrcmrow']").unbind('click');
+      $("span[id*='flagicnrcmrow']").click(function () {
+        let flagged = $(this).hasClass('flagged') ? false : true;
+        if (!flagged) {
+          $(this).addClass('unflagged').removeClass('flagged');
+        }
+        else {
+          $(this).addClass('flagged').removeClass('unflagged');
+        }
+        $(this).closest('tr').toggleClass('flagged');
+
+        let seen = $(this).closest('tr').hasClass('unread') ? false : true;
+
+        let uid = $(this).closest('tr').find('a').attr('href').split('&')[2].split('=')[1];
+        window.api.send('flag_unflagged', { "uid": uid, "SEEN": seen, "FLAGGED": flagged });
+        rcmail.display_message('Courriels marqués avec succès', 'confirmation');
+      })
+    }
+
+    function deleteMails(uids) {
+      rcmail.enable_command('delete', true);
+      $(".button.delete").unbind('click');
+      $('.button.delete').removeAttr("onclick").removeAttr('href');
+      $('.button.delete').on('click', function (e) {
+        e.preventDefault();
+        if (confirm('Voulez-vous supprimer le(s) mail(s) sélectionné(s) ?')) {
+          for (const uid of uids) {
+            rcmail.message_list.remove_row(uid);
+          }
+          window.api.send('delete_selected_mail', uids);
+          let body = $("#mainscreen").contents().find('#mailview-bottom');
+          body.html('');
+          rcmail.display_message('Courriel(s) supprimé(s) avec succès', 'confirmation');
         }
       });
-    });
-  }
+    }
 
-  function resetSearchEvent(path) {
-    $("#searchreset").on('click', function (e) {
-      e.preventDefault();
-      rcmail.message_list.clear();
-      displayMessageList(path);
-    });
-  }
+    function formatDate(row_date) {
+      let date = new Date(row_date);
+      return (date.getDate() < 10 ? '0' : '') + date.getDate() +
+        '/'
+        + (date.getMonth() < 10 ? '0' : '') + (date.getMonth() + 1) +
+        '/'
+        + date.getFullYear() +
+        ' '
+        + (date.getUTCHours() < 10 ? '0' : '') + date.getUTCHours() +
+        ':'
+        + (date.getUTCMinutes() < 10 ? '0' : '') + date.getUTCMinutes();
+    }
 
-  function openAttachment(uid, partid) {
-    window.api.send('attachment_select', { 'uid': uid, 'partid': partid })
-  }
+    function hideSelectedMail() {
+      let doc = document.getElementById('messagecontframe').contentWindow.document;
+      doc.open();
+      doc.write("");
+      doc.close();
+    }
 
-  function addMessageRow(row, mbox) {
-    row.fromto = "<span class='adr'><span class='rcmContactAddress'>" + row.fromto + "</span></span>";
-    row.date = formatDate(row.date);
-    let etiquettes = JSON.parse(row.etiquettes);
-    let seen = etiquettes.SEEN ? 1 : 0;
-    let flagged = etiquettes.FLAGGED ? 1 : 0;
-    let flags = { "flagged": flagged, "seen": seen, "ctype": row.content_type, "mbox": mbox };
-    rcmail.add_message_row(row.id, row, flags, false);
-  }
-
-
-  //Gestion des lus/non lus
-  function read_unread() {
-    $("span[id*='msgicnrcmrow']").unbind('click');
-    $("span[id*='msgicnrcmrow']").click(function () {
-      let seen = $(this).hasClass('unread') ? true : false;
-      let flagged = $(this).closest('tr').hasClass('flagged') ? true : false;
-      $(this).toggleClass('unread');
-      $(this).closest('tr').toggleClass('unread');
-      let uid = $(this).next().attr('href').split('&')[2].split('=')[1];
-      window.api.send('read_unread', { "uid": uid, "SEEN": seen, "FLAGGED": flagged });
-      rcmail.display_message('Courriels marqués avec succès', 'confirmation');
-    })
-  }
-
-  //Gestion des flags
-  function flag_unflagged() {
-    $("span[id*='flagicnrcmrow']").unbind('click');
-    $("span[id*='flagicnrcmrow']").click(function () {
-      let flagged = $(this).hasClass('flagged') ? false : true;
-      if (!flagged) {
-        $(this).addClass('unflagged').removeClass('flagged');
+    function translateFolder(name) {
+      switch (name) {
+        case 'INBOX':
+          return 'Boite de réception'
+        case 'Drafts':
+          return 'Brouillons'
+        case 'Sent':
+          return 'Envoyés'
+        case 'Trash':
+          return 'Corbeille'
+        case 'Junk':
+          return 'Indésirable'
+        case 'Templates':
+          return 'Modèles'
+        default:
+          return name;
       }
-      else {
-        $(this).addClass('flagged').removeClass('unflagged');
-      }
-      $(this).closest('tr').toggleClass('flagged');
-
-      let seen = $(this).closest('tr').hasClass('unread') ? false : true;
-
-      let uid = $(this).closest('tr').find('a').attr('href').split('&')[2].split('=')[1];
-      window.api.send('flag_unflagged', { "uid": uid, "SEEN": seen, "FLAGGED": flagged });
-      rcmail.display_message('Courriels marqués avec succès', 'confirmation');
-    })
-  }
-
-  function deleteMails(uids) {
-    rcmail.enable_command('delete', true);
-    $(".button.delete").unbind('click');
-    $('.button.delete').removeAttr("onclick").removeAttr('href');
-    $('.button.delete').on('click', function (e) {
-      e.preventDefault();
-      if (confirm('Voulez-vous supprimer le(s) mail(s) sélectionné(s) ?')) {
-        for (const uid of uids) {
-          rcmail.message_list.remove_row(uid);
-        }
-        window.api.send('delete_selected_mail', uids);
-        let body = $("#mainscreen").contents().find('#mailview-bottom');
-        body.html('');
-        rcmail.display_message('Courriel(s) supprimé(s) avec succès', 'confirmation');
-      }
-    });
-  }
-
-  function formatDate(row_date) {
-    let date = new Date(row_date);
-    return (date.getUTCDate() < 10 ? '0' : '') + date.getUTCDate() +
-      '/'
-      + (date.getUTCMonth() < 10 ? '0' : '') + date.getUTCMonth() +
-      '/'
-      + date.getUTCFullYear() +
-      ' '
-      + (date.getUTCHours() < 10 ? '0' : '') + date.getUTCHours() +
-      ':'
-      + (date.getUTCMinutes() < 10 ? '0' : '') + date.getUTCMinutes();
-  }
-
-  function translateFolder(name) {
-    switch (name) {
-      case 'INBOX':
-        return 'Boite de réception'
-      case 'Drafts':
-        return 'Brouillons'
-      case 'Sent':
-        return 'Envoyés'
-      case 'Trash':
-        return 'Corbeille'
-      case 'Junk':
-        return 'Indésirable'
-      case 'Templates':
-        return 'Modèles'
-      default:
-        return name;
     }
   }
-
 }
