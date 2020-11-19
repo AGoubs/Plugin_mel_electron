@@ -209,12 +209,13 @@ if (rcmail.env.iselectron) {
       var doc = document.getElementById('messagecontframe').contentWindow.document;
       doc.open();
       doc.write(mail);
+      doc.close();
       let iframe = doc.getElementById('iframe_messagepreview')
       if (iframe) {
         doc.getElementById('iframe_messagepreview').removeAttribute("style");
       }
-      doc.close();
     });
+
 
     let drag_uid = [];
     function drag_start(list) {
