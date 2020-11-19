@@ -194,8 +194,6 @@ if (rcmail.env.iselectron) {
             .addEventListener('column_replace', function (o) { rcmail.msglist_set_coltypes(o); })
             .addEventListener('listupdate', function (o) { rcmail.triggerEvent('listupdate', o); })
             .init();
-
-            console.log(rcmail.message_list._events);
         }
         //Premier index de message_list = 0 au lieu de 'MA'
         if (uid == "MA") {
@@ -204,14 +202,19 @@ if (rcmail.env.iselectron) {
 
         window.api.send('mail_select', uid)
 
-        window.api.receive('mail_return', (mail) => {
-          var doc = document.getElementById('messagecontframe').contentWindow.document;
-          doc.open();
-          doc.write(mail);
-          doc.close();
-        });
       }
     };
+
+    window.api.receive('mail_return', (mail) => {
+      var doc = document.getElementById('messagecontframe').contentWindow.document;
+      doc.open();
+      doc.write(mail);
+      let iframe = doc.getElementById('iframe_messagepreview')
+      if (iframe) {
+        doc.getElementById('iframe_messagepreview').removeAttribute("style");
+      }
+      doc.close();
+    });
 
     let drag_uid = [];
     function drag_start(list) {
@@ -237,13 +240,12 @@ if (rcmail.env.iselectron) {
             _account: rcmail.env.account,
             _uids: drag_uid,
           });
-          
+
         }
       }
     }
 
     rcmail.addEventListener('responseafterplugin.mel_archivage_traitement_electron', function (event) {
-      console.log(event.response.data);
       let stringified = JSON.stringify(event.response.data);
       let parsedObj = JSON.parse(stringified);
       let files = [];
