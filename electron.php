@@ -5,7 +5,7 @@
  *
  * Plugin d'affichage de Mél dans un client Electron en lien avec le plugin Mél_archivage
  * Les messages sont téléchargés sur le poste de l'utilisateur
- * Puis copié dans un dossier configuré dans 'Mails archive' 
+ * Puis copié dans un dossier configuré dans le dossier d'archive
  * Du dossier de l'application Electron 
  *
  * This program is free software; you can redistribute it and/or modify
