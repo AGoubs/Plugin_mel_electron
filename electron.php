@@ -45,6 +45,7 @@ class electron extends rcube_plugin
 
             $this->add_texts('localization/', true);
             $this->register_action('plugin.import_message', array($this, 'import_message'));
+            $this->register_action('plugin.wash_html', array($this, 'wash_html'));
         }
     }
 
@@ -121,4 +122,5 @@ class electron extends rcube_plugin
         rcube::raise_error("Failed to import message to $folder", true, false);
         return false;
     }
+
 }

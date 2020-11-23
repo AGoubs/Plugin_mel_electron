@@ -177,6 +177,8 @@ if (rcmail.env.iselectron) {
 
       if (list.get_selection().length < 2) {
         if (!uid.length && rcmail.env.mailbox != rcmail.env.local_archive_folder) {
+          let body = $("#mainscreen").contents().find('#mailview-bottom');
+          body.html('<iframe name="messagecontframe" id="messagecontframe" style="width:100%; height:100%" frameborder="0" src="skins/mel_larry/watermark.html" title="Prévisualisation des courriels"></iframe>');
           cancel_search_form();
           cancel_reset_search_form();
           delete rcmail.message_list._events;
@@ -201,19 +203,12 @@ if (rcmail.env.iselectron) {
         }
 
         window.api.send('mail_select', uid)
-
       }
     };
 
     window.api.receive('mail_return', (mail) => {
-      var doc = document.getElementById('messagecontframe').contentWindow.document;
-      doc.open();
-      doc.write(mail);
-      doc.close();
-      let iframe = doc.getElementById('iframe_messagepreview')
-      if (iframe) {
-        doc.getElementById('iframe_messagepreview').removeAttribute("style");
-      }
+      let body = $("#mainscreen").contents().find('#mailview-bottom');
+        body.html(mail);
     });
 
 
@@ -224,7 +219,6 @@ if (rcmail.env.iselectron) {
 
     function drag_end_import(list) {
       if (drag_uid && list.target.rel) {
-        console.log(list.target.rel);
         if (!list.target.rel.includes(rcmail.env.username)) {
           for (const uid of drag_uid) {
             window.api.send('eml_read', { "uid": uid, "folder": list.target.rel });
@@ -234,7 +228,7 @@ if (rcmail.env.iselectron) {
     }
 
     function drag_end_archive(list) {
-      if (drag_uid && list.target.rel) {
+      if (drag_uid.length && list.target.rel) {
         if (list.target.rel.includes(rcmail.env.username) || list.target.rel == rcmail.env.local_archive_folder) {
           rcmail.http_get('mail/plugin.mel_archivage_traitement_electron', {
             _mbox: rcmail.env.mailbox,
@@ -265,7 +259,6 @@ if (rcmail.env.iselectron) {
     });
 
     window.api.receive('eml_return', (eml) => {
-      console.log(eml);
       rcmail.http_post('mail/plugin.import_message', {
         _folder: eml.folder,
         _message: eml.text,
