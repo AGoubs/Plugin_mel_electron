@@ -136,8 +136,9 @@ if (rcmail.env.iselectron) {
     // ----- Changement de l'environnement et chargement de la liste  ----- 
     // ----- Fonction appelée lors du clique sur un dossier -----
     function chargementArchivage(path) {
-      delete rcmail.message_list._events;
-
+      delete rcmail.message_list._events.select;
+      delete rcmail.message_list._events.initrow;
+      delete rcmail.message_list._events.dblclick;
       hideSelectedMail()
 
       mbox = (path == '') ? rcmail.env.local_archive_folder : rcmail.env.local_archive_folder + "/" + path;
@@ -208,8 +209,10 @@ if (rcmail.env.iselectron) {
 
     window.api.receive('mail_return', (mail) => {
       let body = $("#mainscreen").contents().find('#mailview-bottom');
-        body.html(mail);
+      body.html(mail);
     });
+
+
 
 
     let drag_uid = [];
@@ -259,6 +262,7 @@ if (rcmail.env.iselectron) {
     });
 
     window.api.receive('eml_return', (eml) => {
+      console.log(eml.text);
       rcmail.http_post('mail/plugin.import_message', {
         _folder: eml.folder,
         _message: eml.text,

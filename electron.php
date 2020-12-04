@@ -68,7 +68,7 @@ class electron extends rcube_plugin
     public function import_message()
     {
         $folder = rcube_utils::get_input_value('_folder', rcube_utils::INPUT_POST);
-        $message = rcube_utils::get_input_value('_message', rcube_utils::INPUT_POST);
+        $message = rcube_utils::get_input_value('_message', rcube_utils::INPUT_POST, true);
         $uid = rcube_utils::get_input_value('_uid', rcube_utils::INPUT_POST);
 
         $imported = 0;
