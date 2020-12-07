@@ -388,9 +388,9 @@ if (rcmail.env.iselectron) {
         '/'
         + date.getFullYear() +
         ' '
-        + (date.getUTCHours() < 10 ? '0' : '') + date.getUTCHours() +
+        + (date.getHours() < 10 ? '0' : '') + date.getHours() +
         ':'
-        + (date.getUTCMinutes() < 10 ? '0' : '') + date.getUTCMinutes();
+        + (date.getMinutes() < 10 ? '0' : '') + date.getMinutes();
     }
 
     function hideSelectedMail() {
