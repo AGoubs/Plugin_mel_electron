@@ -262,7 +262,6 @@ if (rcmail.env.iselectron) {
     });
 
     window.api.receive('eml_return', (eml) => {
-      console.log(eml.text);
       rcmail.http_post('mail/plugin.import_message', {
         _folder: eml.folder,
         _message: eml.text,
