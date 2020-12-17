@@ -38,7 +38,7 @@ class electron extends rcube_plugin
             $username = $rcmail->get_user_name();
             $account = rcube_utils::get_input_value('_account', rcube_utils::INPUT_GET);
 
-            $account ? $rcmail->output->set_env('account', $account) : $rcmail->output->set_env('account', $username);
+            $account ? $rcmail->output->set_env('account_electron', $account) : $rcmail->output->set_env('account_electron', $username);
 
             $skin_path = $this->local_skin_path();
             $this->include_stylesheet($skin_path . '/css/electron.css');
