@@ -121,11 +121,11 @@ if (rcmail.env.iselectron) {
             .html(translateFolder(child.name));
           //On ignore le dossier de l'utilisateur
           if (parent.relativePath == "") {
-            rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder, 'mailbox');
+            rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox sub_archives_locales'] }, rcmail.env.local_archive_folder, 'mailbox');
           }
           //On insère les dossiers sous le dossier principal
           else {
-            rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox'] }, rcmail.env.local_archive_folder + '/' + parent.relativePath, 'mailbox');
+            rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox sub_archives_locales'] }, rcmail.env.local_archive_folder + '/' + parent.relativePath, 'mailbox');
           }
           getChildren(child);
         }
