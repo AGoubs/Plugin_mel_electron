@@ -138,7 +138,7 @@ if (rcmail.env.iselectron) {
       delete rcmail.message_list._events.select;
       delete rcmail.message_list._events.initrow;
       delete rcmail.message_list._events.dblclick;
-      hideSelectedMail()
+      // hideSelectedMail()
 
       mbox = (path == '') ? rcmail.env.local_archive_folder : rcmail.env.local_archive_folder + "/" + path;
       rcmail.env.mailbox = mbox;
@@ -393,7 +393,7 @@ if (rcmail.env.iselectron) {
     }
 
     function hideSelectedMail() {
-      let doc = document.getElementById('messagecontframe').contentWindow.document;
+      let doc = document.getElementById('mailpreviewframe').contentWindow.document;
       doc.open();
       doc.write("");
       doc.close();
