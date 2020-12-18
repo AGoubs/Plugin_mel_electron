@@ -231,7 +231,7 @@ if (rcmail.env.iselectron) {
 
     function drag_end_archive(list) {
       if (drag_uid.length && list.target.rel) {
-        if (list.target.rel.includes(rcmail.env.account_electron) || list.target.rel == rcmail.env.local_archive_folder) {
+        if (list.target.rel.includes(rcmail.env.account_electron)) {
           rcmail.http_get('mail/plugin.mel_archivage_traitement_electron', {
             _mbox: rcmail.env.mailbox,
             _account: rcmail.env.account_electron,
