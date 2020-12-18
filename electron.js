@@ -235,14 +235,15 @@ if (rcmail.env.iselectron) {
           rcmail.http_get('mail/plugin.mel_archivage_traitement_electron', {
             _mbox: rcmail.env.mailbox,
             _account: rcmail.env.account_electron,
+            _path_folder: list.target.rel,
             _uids: drag_uid,
           });
-
         }
       }
     }
 
     rcmail.addEventListener('responseafterplugin.mel_archivage_traitement_electron', function (event) {
+      console.log(event.response);
       let stringified = JSON.stringify(event.response.data);
       let parsedObj = JSON.parse(stringified);
       let files = [];
@@ -253,8 +254,9 @@ if (rcmail.env.iselectron) {
           if (!uid.flags.hasOwnProperty('SEEN')) {
             uid.flags.SEEN = false;
           }
-          files.push({ "url": rcmail.url('mail/viewsource', rcmail.params_from_uid(uid.message_uid)).concat("&_save=1"), "uid": uid.message_uid, "path_folder": rcmail.env.account_electron + "/" + mbox, "mbox": mbox, "etiquettes": uid.flags });
+          files.push({ "url": rcmail.url('mail/viewsource', rcmail.params_from_uid(uid.message_uid)).concat("&_save=1"), "uid": uid.message_uid, "path_folder": event.response.path_folder, "mbox": mbox, "etiquettes": uid.flags });
         }
+        console.log(files);
         window.parent.api.send('download_eml', { "files": files, "token": rcmail.env.request_token });
         $("#nb_mails").text(rcmail.get_label('mel_archivage.archive_downloading'));
       }
