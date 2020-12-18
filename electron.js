@@ -243,7 +243,6 @@ if (rcmail.env.iselectron) {
     }
 
     rcmail.addEventListener('responseafterplugin.mel_archivage_traitement_electron', function (event) {
-      console.log(event.response);
       let stringified = JSON.stringify(event.response.data);
       let parsedObj = JSON.parse(stringified);
       let files = [];
@@ -256,7 +255,6 @@ if (rcmail.env.iselectron) {
           }
           files.push({ "url": rcmail.url('mail/viewsource', rcmail.params_from_uid(uid.message_uid)).concat("&_save=1"), "uid": uid.message_uid, "path_folder": event.response.path_folder, "mbox": mbox, "etiquettes": uid.flags });
         }
-        console.log(files);
         window.parent.api.send('download_eml', { "files": files, "token": rcmail.env.request_token });
         $("#nb_mails").text(rcmail.get_label('mel_archivage.archive_downloading'));
       }
