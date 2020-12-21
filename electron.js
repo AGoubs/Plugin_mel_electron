@@ -40,6 +40,12 @@ if (rcmail.env.iselectron) {
       rcmail.message_list
         .addEventListener('dragstart', function (o) { drag_start(o); })
         .addEventListener('dragend', function (o) { drag_end_archive(o) })
+
+      if (rcmail.env.task == 'mail') {
+        rcmail.register_command('plugin_import_archive', function(){
+          window.api.send('import-archivage')
+        }, true);
+      }
     });
 
     //  ----- Réaffiche les sous-dossier après archivage d'un nouveau dossier -----
