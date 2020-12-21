@@ -49,7 +49,7 @@ class electron extends rcube_plugin
             if ($this->isElectron()) {
                 $this->include_script('electron.js');
     
-                if ($this->api->output->type == 'html') {
+                if ($this->api->output->type == 'html' && $rcmail->task == 'mail') {
                     $content = html::tag('li', array(
                         'role' => 'menuitem'
                     ), $this->api->output->button(array(
