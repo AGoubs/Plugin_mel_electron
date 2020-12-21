@@ -24,16 +24,6 @@
 
 class electron extends rcube_plugin
 {
-    /**
-     * Task courante pour le plugin
-     *
-     * @var string
-     */
-    public $task = 'mail|settings';
-
-    /**
-     * Méthode d'initialisation du plugin electron
-     */
     function init()
     {
         $rcmail = rcmail::get_instance();
@@ -55,22 +45,23 @@ class electron extends rcube_plugin
 
             $this->add_texts('localization/', true);
             $this->register_action('plugin.import_message', array($this, 'import_message'));
-        }
 
-        
-        if ($this->isElectron()) {
-            $this->include_script('electron.js');
-
-            $content = html::tag('li', array(
-                'role' => 'menuitem'
-            ), $this->api->output->button(array(
-                'label' => 'electron.title',
-                'type' => 'link',
-                'classact' => 'active',
-                'command' => 'plugin_import_archive',
-            )));
-            $this->api->add_content($content, 'mailboxoptions');
-        }
+            if ($this->isElectron()) {
+                $this->include_script('electron.js');
+    
+                if ($this->api->output->type == 'html') {
+                    $content = html::tag('li', array(
+                        'role' => 'menuitem'
+                    ), $this->api->output->button(array(
+                        'label' => 'electron.title',
+                        'type' => 'link',
+                        'classact' => 'active',
+                        'command' => 'plugin_import_archive',
+                    )));
+                    $this->api->add_content($content, 'mailboxoptions');
+                }
+            }
+        }       
     }
 
     /**
