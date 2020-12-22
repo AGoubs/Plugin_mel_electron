@@ -42,7 +42,7 @@ if (rcmail.env.iselectron) {
         .addEventListener('dragend', function (o) { drag_end_archive(o) })
 
       if (rcmail.env.task == 'mail') {
-        rcmail.register_command('plugin_import_archive', function(){
+        rcmail.register_command('plugin_import_archive', function () {
           window.api.send('import-archivage')
         }, true);
       }
@@ -88,6 +88,18 @@ if (rcmail.env.iselectron) {
       rcmail.hide_message(message_cancel);
       rcmail.display_message('Fin du téléchargement des archives', 'confirmation');
     });
+
+
+    
+    window.api.receive('import-advancement', (data) => {
+      rcmail.hide_message(message_archivage);
+      message_archivage = rcmail.display_message(`Nombre de mails restants à importer : ${data}`, 'loading');
+    })
+
+    window.api.receive('import-finish', () => {
+      rcmail.hide_message(message_archivage);
+      rcmail.display_message("Fin de l'importation des archives", 'confirmation');
+    })
 
     // ----- Créer le dossier des archives -----
     function createFolder() {
