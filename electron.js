@@ -389,7 +389,7 @@ if (rcmail.env.iselectron) {
       let date = new Date(row_date);
       return (date.getDate() < 10 ? '0' : '') + date.getDate() +
         '/'
-        + (date.getMonth() < 10 ? '0' : '') + (date.getMonth() + 1) +
+        + (date.getMonth() < 9 ? '0' : '') + (date.getMonth() + 1) +
         '/'
         + date.getFullYear() +
         ' '
