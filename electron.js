@@ -53,21 +53,23 @@ if (rcmail.env.iselectron) {
 
       else if (rcmail.env.task == 'settings') {
         if (rcmail.env.action == 'plugin.electron') {
+
+          window.api.send('get_archive_path');
+          window.api.receive('archive_path', (archive_path) => {
+            $('#archive_path').val(archive_path)
+            $('#folder_path').append($('<option>', {
+              value: archive_path + "/" + rcmail.env.account_electron,
+              text: "---",
+            }));
+          });
+
           window.api.send('subfolder');
           window.api.receive('listSubfolder', (subfolders) => {
             subfolders.forEach(subfolder => {
               if (subfolder.name == rcmail.env.account_electron) {
-                $('#folder_path').append($('<option>', {
-                  value: subfolder.path,
-                  text: "---",
-                }));
                 displayTree(subfolder.children, '', 1);
               }
             })
-          });
-          window.api.send('get_archive_path');
-          window.api.receive('archive_path', (archive_path) => {
-            $('#archive_path').val(archive_path)
           });
 
         }
@@ -118,7 +120,7 @@ if (rcmail.env.iselectron) {
 
 
     window.api.receive('change_archive_path_success', (result) => {
-      $('#relaunch').append('<div class="texte_explic">Merci de redémarrer le client pour appliquer le changement</div>');    
+      $('#relaunch').append('<div class="texte_explic">Merci de redémarrer le client pour appliquer le changement</div>');
     })
 
     //  ----- Récupère le nouveau chemin pour le dossier des archives -----
