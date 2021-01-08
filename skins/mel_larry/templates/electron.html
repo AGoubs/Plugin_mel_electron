@@ -23,6 +23,8 @@
         <h4>
           <roundcube:label name="electron.change_archive_path" />
         </h4>
+        <div class="texte_explic">Un dossier "Archives locales" sera créé s'il n'existe pas</div>
+        <br>
         <form name="form" method="post" action="#" class="propform" id="change_path_form">
           <fieldset>
             <table class="propform">
@@ -42,6 +44,8 @@
               </tbody>
             </table>
           </fieldset>
+          <div id="relaunch"></div>
+          <br>
           <input type="submit" class="button mainaction" name="save" value="<roundcube:label name='electron.save' />" />
           </p>
         </form>

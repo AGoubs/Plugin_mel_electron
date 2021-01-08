@@ -87,6 +87,8 @@ if (rcmail.env.iselectron) {
         submit: function (e) {
           // Toggle les items de la liste
           e.preventDefault();
+          let path = $('#archive_path').val();
+          window.api.send('change_archive_path', path);
         }
       }, "#change_path_form");
 
@@ -113,6 +115,11 @@ if (rcmail.env.iselectron) {
           window.api.send('create_folder', { name: name, path: path })
         }
       }, "#create_folder_form");
+
+
+    window.api.receive('change_archive_path_success', (result) => {
+      $('#relaunch').append('<div class="texte_explic">Merci de redémarrer le client pour appliquer le changement</div>');    
+    })
 
     //  ----- Récupère le nouveau chemin pour le dossier des archives -----
     window.api.receive('new_archive_path_result', (result) => {
