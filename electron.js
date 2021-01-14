@@ -121,7 +121,7 @@ if (rcmail.env.iselectron) {
 
 
     window.api.receive('change_archive_path_success', (result) => {
-      $('#relaunch').append('<div class="texte_explic">Merci de redémarrer le client pour appliquer le changement</div>');
+      $('#relaunch').replaceWith('<div class="texte_explic">Merci de redémarrer le client pour appliquer les changements</div>');
     })
 
     //  ----- Récupère le nouveau chemin pour le dossier des archives -----
@@ -330,7 +330,14 @@ if (rcmail.env.iselectron) {
     function drag_move_archive(list) {
       let path = list.path[1];
       if (path.className == "mailbox sub_archives_locales") {
-        $('#' + path.id).addClass('droptarget');
+        $('#' + path.id).hover(
+          function () {
+            $(this).addClass('droptarget');
+          },
+          function () {
+            $(this).removeClass('droptarget');
+          }
+        );
       }
     }
 
@@ -363,7 +370,7 @@ if (rcmail.env.iselectron) {
         }
         window.parent.api.send('download_eml', { "files": files, "token": rcmail.env.request_token });
         $("#nb_mails").text(rcmail.get_label('mel_archivage.archive_downloading'));
-        
+
       }
     });
 
