@@ -370,7 +370,6 @@ if (rcmail.env.iselectron) {
         }
         window.parent.api.send('download_eml', { "files": files, "token": rcmail.env.request_token });
         $("#nb_mails").text(rcmail.get_label('mel_archivage.archive_downloading'));
-
       }
     });
 
