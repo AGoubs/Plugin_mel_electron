@@ -41,8 +41,13 @@ if (rcmail.env.iselectron) {
         window.api.send('get_archive_folder')
         window.api.receive('archive_folder', (folder) => {
           rcmail.env.local_archive_folder = folder;
-          createFolder();
-          displaySubfolder();
+          let users = []
+          $('#mailboxlist li.mailbox.local').each(function () {
+            var user = atob($(this).attr('id').replace('rcmli', '')).replace('local-', '');
+            users.push(user);
+          });
+          displaySubfolder(users);
+          // createFolder();
         });
 
         rcmail.message_list
@@ -142,7 +147,7 @@ if (rcmail.env.iselectron) {
 
     //  ----- Réaffiche les sous-dossier après archivage d'un nouveau dossier -----
     window.api.receive('new_folder', (folder) => {
-      displaySubfolder();
+      // displaySubfolder();
     })
 
     // ----- Ajout des mails dans la liste après archivage -----
@@ -207,19 +212,22 @@ if (rcmail.env.iselectron) {
     }
 
     // ----- Affiche les sous-dossier des archives (récursif)-----
-    function displaySubfolder() {
+    function displaySubfolder(users) {
       window.api.send('subfolder');
       window.api.receive('listSubfolder', (subfolders) => {
         subfolders.forEach(subfolder => {
-          if (subfolder.name == rcmail.env.account_electron) {
-            subfolder.relativePath = '';
-            getChildren(subfolder);
-          }
+          users.forEach(user => {
+            if (subfolder.name === user) {
+              console.log(subfolder);
+              subfolder.relativePath = '';
+              getChildren(subfolder, user);
+            }
+          })
         })
       });
     }
 
-    function getChildren(parent) {
+    function getChildren(parent, user) {
       if (parent && parent.children) {
         for (var i = 0, l = parent.children.length; i < l; ++i) {
           var child = parent.children[i];
@@ -231,13 +239,13 @@ if (rcmail.env.iselectron) {
             .html(translateFolder(child.name));
           //On ignore le dossier de l'utilisateur
           if (parent.relativePath == "") {
-            rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox sub_archives_locales'] }, rcmail.env.local_archive_folder, 'mailbox');
+            rcmail.treelist.insert({ id: `local-${user}/${key}`, html: link, classes: ['mailbox sub_archives_locales'] }, `local-${user}`, 'mailbox');
           }
           //On insère les dossiers sous le dossier principal
           else {
-            rcmail.treelist.insert({ id: rcmail.env.local_archive_folder + '/' + key, html: link, classes: ['mailbox sub_archives_locales'] }, rcmail.env.local_archive_folder + '/' + parent.relativePath, 'mailbox');
+            rcmail.treelist.insert({ id: `local-${user}/${key}`, html: link, classes: ['mailbox sub_archives_locales'] }, `local-${user}/${parent.relativePath}`, 'mailbox');
           }
-          getChildren(child);
+          getChildren(child, user);
         }
       }
     }
