@@ -48,7 +48,6 @@ if (rcmail.env.iselectron) {
           });
           rcmail.env.local_users_list = users;
           displaySubfolder();
-          // createFolder();
         });
 
         rcmail.message_list
@@ -198,19 +197,6 @@ if (rcmail.env.iselectron) {
       rcmail.hide_message(message_archivage);
       rcmail.display_message("Fin de l'importation des archives", 'confirmation');
     })
-
-    // ----- Créer le dossier des archives -----
-    function createFolder() {
-      let link = $('<a>').attr('href', '#')
-        .attr('rel', rcmail.env.local_archive_folder)
-        .attr('onClick', "chargementArchivage('')")
-        .html(rcmail.env.local_archive_folder);
-
-      rcmail.treelist.insert({ id: rcmail.env.local_archive_folder, html: link, classes: ['mailbox archives_locales'] });
-      if ($("li.trash").length) {
-        $("li.archives_locales").detach().insertAfter($("li.trash"));
-      }
-    }
 
     // ----- Affiche les sous-dossier des archives (récursif)-----
     function displaySubfolder() {
