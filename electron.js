@@ -46,7 +46,8 @@ if (rcmail.env.iselectron) {
             var user = atob($(this).attr('id').replace('rcmli', '')).replace('local-', '');
             users.push(user);
           });
-          displaySubfolder(users);
+          rcmail.env.local_users_list = users;
+          displaySubfolder();
           // createFolder();
         });
 
@@ -212,13 +213,12 @@ if (rcmail.env.iselectron) {
     }
 
     // ----- Affiche les sous-dossier des archives (récursif)-----
-    function displaySubfolder(users) {
+    function displaySubfolder() {
       window.api.send('subfolder');
       window.api.receive('listSubfolder', (subfolders) => {
         subfolders.forEach(subfolder => {
-          users.forEach(user => {
+          rcmail.env.local_users_list.forEach(user => {
             if (subfolder.name === user) {
-              console.log(subfolder);
               subfolder.relativePath = '';
               getChildren(subfolder, user);
             }
@@ -362,19 +362,19 @@ if (rcmail.env.iselectron) {
 
     function drag_end_archive(list) {
       if (drag_uid.length && list.target.rel) {
-        if (list.target.rel.includes(rcmail.env.account_electron)) {
 
-          var params = {
-            _mbox: rcmail.env.mailbox,
-            _path_folder: list.target.rel,
-            _uids: drag_uid,
-          };
-          //Dans le cas d'une boite partagée
-          if (rcmail.env.account) {
-            params._account = rcmail.env.account;
-          }
-          rcmail.http_get('mail/plugin.mel_archivage_traitement_electron', params);
+        var params = {
+          _mbox: rcmail.env.mailbox,
+          _path_folder: list.target.rel,
+          _uids: drag_uid,
+        };
+
+        //Dans le cas d'une boite partagée
+        if (rcmail.env.account) {
+          params._account = rcmail.env.account;
         }
+
+        rcmail.http_get('mail/plugin.mel_archivage_traitement_electron', params);
       }
     }
 
